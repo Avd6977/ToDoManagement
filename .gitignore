@@ -55,3 +55,15 @@ CodeCoverage/
 *.VisualState.xml
 TestResult.xml
 nunit-*.xml
+
+# Frontend build and cache artifacts (repo-root anchored)
+/frontend/node_modules/
+/frontend/dist/
+/frontend/.vite/
+/frontend/coverage/
+/frontend/*.tsbuildinfo
+
+# Backend local database files
+/backend/tasks.db
+/backend/tasks.db-shm
+/backend/tasks.db-wal
