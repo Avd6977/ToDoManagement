@@ -1,8 +1,14 @@
 # ToDoManagement
 
 Full-stack task management application with:
-- Backend: .NET 7 Web API, EF Core + SQLite, JWT authentication
+- Backend: .NET 8 Web API, EF Core + SQLite, JWT authentication
 - Frontend: React + TypeScript + Vite + Axios
+
+## Required Versions
+
+- .NET SDK: **8.0** (or newer 8.0.x patch)
+- EF Core packages: **8.0.20**
+- EF CLI: **dotnet-ef 8.0.20**
 
 ## Features
 
@@ -24,7 +30,7 @@ Full-stack task management application with:
   - `UpdatedBy`, `UpdatedDateUtc`
 - Application-managed temporal history (`TaskItemHistory`) for update/delete snapshots.
 - Strongly typed JWT settings via `JwtTokenDto` (`IOptions<JwtTokenDto>`).
-- Automatic schema creation on startup (uses `Database.EnsureCreated()` when database does not exist).
+- Migration-based schema updates on startup (uses `Database.Migrate()`).
 - Validation using FluentValidation for auth and task payloads.
 
 ## Project Structure
@@ -35,6 +41,7 @@ ToDoManagement/
 │   ├── Controllers/
 │   ├── Data/
 │   ├── Dtos/
+│   ├── Migrations/
 │   ├── Models/
 │   ├── Services/
 │   ├── Validators/
@@ -66,6 +73,8 @@ dotnet build
 dotnet run
 ```
 
+Startup applies pending migrations automatically.
+
 4. API base URL (default):
 - `http://localhost:5000` (or URL shown by `dotnet run` output)
 
@@ -79,14 +88,14 @@ This project uses EF Core migrations for schema changes over time (including SQL
 
 From `backend/ToDoManagement.Api.csproj`:
 
-- `Microsoft.EntityFrameworkCore.Sqlite`
-- `Microsoft.EntityFrameworkCore.Design`
+- `Microsoft.EntityFrameworkCore.Sqlite` **8.0.20**
+- `Microsoft.EntityFrameworkCore.Design` **8.0.20**
 
 CLI tool required to scaffold/apply migrations:
 
 ```bash
-dotnet tool install --global dotnet-ef
-dotnet tool update --global dotnet-ef
+dotnet tool install --global dotnet-ef --version 8.0.20
+dotnet tool update --global dotnet-ef --version 8.0.20
 dotnet ef --version
 ```
 
@@ -159,11 +168,9 @@ npm run dev
 
 ## Database Initialization
 
-This project no longer requires EF migration tooling to run locally.
-
 - Database provider: SQLite (`backend/tasks.db`)
-- Initialization strategy: `EnsureCreated()` at API startup
-- Result: if the database file is missing, schema is created from the current model automatically
+- Initialization strategy: EF Core migrations (`Migrate()` at startup)
+- Result: pending migrations are applied automatically when the API starts
 
 ## Authentication Endpoints
 
