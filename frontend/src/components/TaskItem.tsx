@@ -48,11 +48,21 @@ export const TaskItem = ({
     setIsEditing(false);
   };
 
+  const isOverdue =
+    !task.isCompleted
+    && !!task.dueDate
+    && new Date(task.dueDate).getTime() < Date.now();
+
   return (
-    <li className={`task-item ${task.isCompleted ? "done" : ""}`}>
+    <li className={`task-item ${task.isCompleted ? "done" : ""} ${isOverdue ? "overdue" : ""}`}>
       {!isEditing ? (
         <>
-          <h4>{task.title}</h4>
+          <h4>
+            {task.title}
+            {isOverdue && (
+              <span className="overdue-icon" title="Overdue" aria-label="Overdue">⚠</span>
+            )}
+          </h4>
           <p>{task.description || "No description"}</p>
           <p>Due: {task.dueDate ? new Date(task.dueDate).toLocaleDateString() : "None"}</p>
 

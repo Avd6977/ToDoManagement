@@ -78,3 +78,23 @@ public sealed class ResetPasswordRequestValidator : AbstractValidator<ResetPassw
             .Matches("[^A-Za-z0-9]").WithMessage("Password must contain at least one special character.");
     }
 }
+
+public sealed class UpdateProfileRequestValidator : AbstractValidator<UpdateProfileRequest>
+{
+    public UpdateProfileRequestValidator()
+    {
+        RuleFor(x => x.FullName)
+            .NotEmpty().WithMessage("Full name is required.")
+            .MaximumLength(100).WithMessage("Full name must be 100 characters or fewer.");
+
+        RuleFor(x => x.NewPassword)
+            .Cascade(CascadeMode.Stop)
+            .MinimumLength(8).When(x => !string.IsNullOrWhiteSpace(x.NewPassword)).WithMessage("Password must be at least 8 characters.")
+            .Matches("[A-Za-z]").When(x => !string.IsNullOrWhiteSpace(x.NewPassword)).WithMessage("Password must contain at least one letter.")
+            .Matches("[0-9]").When(x => !string.IsNullOrWhiteSpace(x.NewPassword)).WithMessage("Password must contain at least one number.")
+            .Matches("[^A-Za-z0-9]").When(x => !string.IsNullOrWhiteSpace(x.NewPassword)).WithMessage("Password must contain at least one special character.");
+
+        RuleFor(x => x.CurrentPassword)
+            .NotEmpty().When(x => !string.IsNullOrWhiteSpace(x.NewPassword)).WithMessage("Current password is required to set a new password.");
+    }
+}

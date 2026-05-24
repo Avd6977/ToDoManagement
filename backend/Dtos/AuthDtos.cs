@@ -48,3 +48,17 @@ public sealed class ResetPasswordRequest
     public string ResetToken { get; set; } = string.Empty;
     public string NewPassword { get; set; } = string.Empty;
 }
+
+public sealed class UpdateProfileRequest
+{
+    public string FullName { get; set; } = string.Empty;
+    public string? CurrentPassword { get; set; }
+    public string? NewPassword { get; set; }
+}
+
+public sealed class ProfileResponse
+{
+    public Guid Id { get; set; }
+    public string FullName { get; set; } = string.Empty;
+    public string Username { get; set; } = string.Empty;
+}

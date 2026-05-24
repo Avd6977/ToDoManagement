@@ -14,6 +14,10 @@ namespace ToDoManagement.Api.Controllers;
 [Route("api/tasks")]
 public sealed class TasksController : ControllerBase
 {
+        private const string StatusOpen = "open";
+        private const string StatusCompleted = "completed";
+        private const string StatusAll = "all";
+
     private readonly AppDbContext _dbContext;
     private readonly IDateTimeService _dateTimeService;
 
@@ -24,7 +28,10 @@ public sealed class TasksController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<ActionResult<IReadOnlyCollection<TaskResponse>>> GetTasks(CancellationToken cancellationToken)
+    public async Task<ActionResult<IReadOnlyCollection<TaskResponse>>> GetTasks(
+        [FromQuery] string? search,
+        [FromQuery] string? status,
+        CancellationToken cancellationToken)
     {
         var userId = GetCurrentUserId();
         if (userId is null)
@@ -32,8 +39,34 @@ public sealed class TasksController : ControllerBase
             return Unauthorized(new { message = "User context is missing from token." });
         }
 
-        var tasks = await _dbContext.Tasks
-            .Where(t => t.OwnerId == userId.Value)
+        var normalizedStatus = (status ?? StatusAll).Trim().ToLowerInvariant();
+        if (normalizedStatus is not StatusOpen and not StatusCompleted and not StatusAll)
+        {
+            return BadRequest(new { message = "Invalid status filter. Use open, completed, or all." });
+        }
+
+        var query = _dbContext.Tasks
+            .Where(t => t.OwnerId == userId.Value);
+
+        if (normalizedStatus == StatusOpen)
+        {
+            query = query.Where(t => !t.IsCompleted);
+        }
+        else if (normalizedStatus == StatusCompleted)
+        {
+            query = query.Where(t => t.IsCompleted);
+        }
+
+        var normalizedSearch = (search ?? string.Empty).Trim();
+        if (!string.IsNullOrWhiteSpace(normalizedSearch))
+        {
+            var loweredSearch = normalizedSearch.ToLowerInvariant();
+            query = query.Where(t =>
+                t.Title.ToLower().Contains(loweredSearch)
+                || t.Description.ToLower().Contains(loweredSearch));
+        }
+
+        var tasks = await query
             .OrderBy(t => t.IsCompleted)
             .ThenBy(t => t.DueDate)
             .Select(t => new TaskResponse

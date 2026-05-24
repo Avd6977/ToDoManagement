@@ -1,7 +1,11 @@
 import { FormEvent, useState } from "react";
 import { forgotPassword } from "../services/api";
 
-export const ForgotPasswordForm = (): JSX.Element => {
+interface ForgotPasswordFormProps {
+  onRequestSucceeded?: () => void;
+}
+
+export const ForgotPasswordForm = ({ onRequestSucceeded }: ForgotPasswordFormProps): JSX.Element => {
   const [username, setUsername] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -23,6 +27,7 @@ export const ForgotPasswordForm = (): JSX.Element => {
       setLoading(true);
       const response = await forgotPassword(username.trim());
       setMessage(response.message);
+      onRequestSucceeded?.();
       // Demo-only: backend returns reset token because email integration is out of scope.
       if (response.resetToken) {
         setTokenPreview(response.resetToken);

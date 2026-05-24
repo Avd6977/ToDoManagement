@@ -24,9 +24,18 @@ Full-stack task management application with:
   - At least 1 special character
 - Passwords are stored at rest as salted PBKDF2 (SHA-256) hashes, never plaintext.
 - Authenticated task CRUD scoped to the logged-in user.
+- Task filtering via `GET /api/tasks` query parameters:
+  - `search` (matches title/description)
+  - `status` (`open`, `completed`, or `all`)
+- Dashboard split view for open tasks + expandable completed tasks section with lazy loading.
+- Overdue due-date highlighting in the dashboard.
+- Profile management for authenticated users:
+  - Update full name
+  - Optional password change when current password is provided
+  - Username is immutable
 - Task audit metadata:
-  - `CreatedBy`, `CreatedDateUtc`
-  - `UpdatedBy`, `UpdatedDateUtc`
+  - `CreatedDateUtc`
+  - `UpdatedDateUtc`
 - Application-managed temporal history (`TaskItemHistory`) for update/delete snapshots.
 - Strongly typed JWT settings via `JwtTokenDto` (`IOptions<JwtTokenDto>`).
 - Migration-based schema updates on startup (uses `Database.Migrate()`).
@@ -249,23 +258,46 @@ sequenceDiagram
 All endpoints require Bearer token.
 
 - `GET /api/tasks`
-  - Returns tasks owned by the current user.
+  - Returns tasks for the current authenticated user only.
+  - Optional query params:
+    - `search`: filters by title/description
+    - `status`: `open`, `completed`, or `all`
 - `POST /api/tasks`
   - Body: `{ title, description, dueDate? }`
-  - The task is always owned by the current user.
+  - The task is always tied to the current authenticated user.
 - `PUT /api/tasks/{id}`
-  - Owner-only.
+  - Current authenticated user only.
   - Body: `{ title, description, dueDate?, isCompleted }`
 - `DELETE /api/tasks/{id}`
-  - Owner-only.
+  - Current authenticated user only.
 
-Task responses include: `{ createdBy, createdDateUtc, updatedBy, updatedDateUtc }`.
+Task responses include: `{ id, title, description, dueDate, isCompleted, createdDateUtc, updatedDateUtc }`.
+
+## Profile Endpoint
+
+All endpoints require Bearer token.
+
+- `PUT /api/auth/profile`
+  - Body: `{ "fullName": "string", "currentPassword"?: "string", "newPassword"?: "string" }`
+  - Behavior:
+    - Full name is updated when valid.
+    - Password changes are optional.
+    - If `newPassword` is provided, `currentPassword` is required and must match.
+    - Username is not editable.
 
 ## Frontend Notes
 
-- Auth screen now includes Register, Login, Forgot Password, and Reset Password forms.
-- Tasks are owned only by the logged-in user.
+- Auth is route-based:
+  - `/` login screen (default)
+  - `/register` registration screen
+  - `/forgot-password` forgot-password request screen
+  - `/reset-password` reset-password screen (available only after a successful forgot-password request in the current app session)
+  - `/tasks` authenticated dashboard
+  - `/create-task` authenticated create-task page
+  - `/profile` authenticated profile page
+- Login view includes inline links under Password: `Register` (left) and `Forgot Password?` (right).
 - JWT is stored client-side and sent as `Authorization: Bearer <token>`.
+- Header includes a profile dropdown with full name + logout actions.
 
 ## Testing
 
@@ -293,7 +325,10 @@ npm run test
 Coverage includes:
 - Registration form behavior.
 - Forgot/reset password form behavior.
-- API service calls with MSW handlers.
+- Profile form behavior.
+- Header dropdown behavior.
+- Route rendering behavior for authenticated pages.
+- API service calls with MSW handlers (including profile update and task filtering behavior).
 
 ## Assumptions
 
@@ -304,7 +339,7 @@ Coverage includes:
 ## Limitations
 
 - Refresh token and access token are stored in browser `localStorage` for demo simplicity.
-- No pagination/filtering for task lists.
+- No pagination for task lists.
 - Single environment-focused configuration.
 
 ## Future Improvements

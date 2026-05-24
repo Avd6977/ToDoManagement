@@ -24,6 +24,48 @@ main {
   gap: 1rem;
 }
 
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.header-main {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.header-main p {
+  margin: 0;
+}
+
+.header-title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.header-title-row h1 {
+  margin: 0;
+}
+
+.back-button {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 999px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+}
+
+.header-actions {
+  display: flex;
+  gap: 0.6rem;
+  align-items: flex-start;
+}
+
 .auth-grid {
   display: grid;
   gap: 1rem;
@@ -93,6 +135,86 @@ button.link-button:hover {
   color: #0043ce;
 }
 
+.create-plus-button {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 999px;
+  padding: 0;
+  font-size: 1.35rem;
+  line-height: 1;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.profile-menu-wrapper {
+  position: relative;
+}
+
+.profile-button {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 999px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+}
+
+.profile-avatar {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #d9e2ec;
+}
+
+.profile-menu {
+  position: absolute;
+  top: 2.2rem;
+  right: 0;
+  background: #fff;
+  border: 1px solid #d9e2ec;
+  border-radius: 8px;
+  box-shadow: 0 6px 20px rgba(16, 42, 67, 0.15);
+  min-width: 120px;
+  padding: 0.3rem;
+  z-index: 2;
+}
+
+.profile-menu-item {
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  color: #102a43;
+}
+
+.profile-menu-item:hover {
+  background: #f0f4f8;
+}
+
+.profile-name-item {
+  font-weight: 600;
+  border-bottom: 1px solid #d9e2ec;
+  margin-bottom: 0.2rem;
+}
+
+.login-links {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.task-search {
+  display: grid;
+  gap: 0.35rem;
+  max-width: 420px;
+}
+
 .task-list {
   list-style: none;
   display: grid;
@@ -113,6 +235,18 @@ button.link-button:hover {
   background: #f0fbf4;
 }
 
+.task-item.overdue {
+  border-color: #e8a4a4;
+  background: #fff3f3;
+}
+
+.overdue-icon {
+  margin-left: 0.4rem;
+  color: #d64545;
+  font-size: 0.95rem;
+  cursor: help;
+}
+
 .actions {
   display: flex;
   gap: 0.5rem;
@@ -127,6 +261,15 @@ button.link-button:hover {
 .hint,
 .subtitle {
   color: #486581;
+}
+
+.completed-section {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.accordion-toggle {
+  justify-self: start;
 }
 
 .token-preview {

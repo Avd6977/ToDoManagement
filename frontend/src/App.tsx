@@ -1,17 +1,22 @@
 import { useEffect, useState } from "react";
-import "./styles.css";
+import { Navigate, Route, Routes, useNavigate } from "react-router-dom";
 import { LoginForm } from "./components/LoginForm";
 import { RegisterForm } from "./components/RegisterForm";
 import { ForgotPasswordForm } from "./components/ForgotPasswordForm";
 import { ResetPasswordForm } from "./components/ResetPasswordForm";
 import { TaskForm } from "./components/TaskForm";
 import { TaskList } from "./components/TaskList";
+import { AppHeader } from "./components/AppHeader";
+import { ProfileForm } from "./components/ProfileForm";
 import {
   createTask,
   deleteTask,
   getStoredUser,
   getTasks,
   logout,
+  type TaskStatusFilter,
+  updateProfile,
+  updateStoredUserFullName,
   updateTask,
 } from "./services/api";
 import type { Task } from "./types/Task";
@@ -19,43 +24,97 @@ import type { User } from "./types/User";
 
 const App = (): JSX.Element => {
   const [user, setUser] = useState<User | null>(getStoredUser());
-  const [tasks, setTasks] = useState<Task[]>([]);
+  const [openTasks, setOpenTasks] = useState<Task[]>([]);
+  const [completedTasks, setCompletedTasks] = useState<Task[] | null>(null);
   const [error, setError] = useState("");
-  const [loadingTasks, setLoadingTasks] = useState(false);
-  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [loadingOpenTasks, setLoadingOpenTasks] = useState(false);
+  const [loadingCompletedTasks, setLoadingCompletedTasks] = useState(false);
+  const [isCompletedExpanded, setIsCompletedExpanded] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [canResetPassword, setCanResetPassword] = useState(false);
+  const navigate = useNavigate();
 
-  const loadTasks = async () => {
+  const loadTasks = async (status: TaskStatusFilter, options?: { force?: boolean }) => {
     if (!user) {
       return;
     }
 
     try {
-      setLoadingTasks(true);
+      if (status == "completed")
+      {
+        if (completedTasks != null && !options?.force)
+        {
+          return;
+        }
+
+        setLoadingCompletedTasks(true);
+      }
+      else
+      {
+        setLoadingOpenTasks(true);
+      }
+
       setError("");
-      const fetchedTasks = await getTasks();
-      setTasks(fetchedTasks);
+      const fetchedTasks = await getTasks({ search: searchTerm, status });
+      if (status == "completed")
+      {
+        setCompletedTasks(fetchedTasks);
+      }
+      else
+      {
+        setOpenTasks(fetchedTasks);
+      }
     } catch (err: any) {
       setError(err?.response?.data?.message ?? "Unable to load tasks.");
     } finally {
-      setLoadingTasks(false);
+      if (status == "completed")
+      {
+        setLoadingCompletedTasks(false);
+      }
+      else
+      {
+        setLoadingOpenTasks(false);
+      }
     }
   };
 
   useEffect(() => {
-    void loadTasks();
-  }, [user]);
+    void loadTasks("open", { force: true });
+    setCompletedTasks(null);
+  }, [user, searchTerm]);
+
+  useEffect(() => {
+    if (isCompletedExpanded && completedTasks == null)
+    {
+      void loadTasks("completed");
+    }
+  }, [isCompletedExpanded, completedTasks, user]);
 
   const handleCreate = async (task: Partial<Task>) => {
-    const createdTask = await createTask(task);
-    setTasks((previous) => [createdTask, ...previous]);
+    await createTask(task);
+    await loadTasks("open", { force: true });
+    if (completedTasks != null)
+    {
+      await loadTasks("completed", { force: true });
+    }
+    navigate("/tasks");
   };
 
   const handleUpdate = async (taskId: string, updates: Partial<Task>) => {
-    const updatedTask = await updateTask(taskId, updates);
-    setTasks((previous) => previous.map((task) => (task.id === taskId ? updatedTask : task)));
+    await updateTask(taskId, updates);
+    await loadTasks("open", { force: true });
+    if (completedTasks != null)
+    {
+      await loadTasks("completed", { force: true });
+    }
   };
 
   const handleToggleComplete = async (task: Task) => {
+    if (!task.isCompleted)
+    {
+      setCompletedTasks(null);
+    }
+
     await handleUpdate(task.id, {
       ...task,
       isCompleted: !task.isCompleted,
@@ -64,57 +123,201 @@ const App = (): JSX.Element => {
 
   const handleDelete = async (taskId: string) => {
     await deleteTask(taskId);
-    setTasks((previous) => previous.filter((task) => task.id !== taskId));
+    await loadTasks("open", { force: true });
+    if (completedTasks != null)
+    {
+      await loadTasks("completed", { force: true });
+    }
   };
 
   const handleLogout = () => {
     logout();
     setUser(null);
-    setTasks([]);
+    setOpenTasks([]);
+    setCompletedTasks(null);
+    setIsCompletedExpanded(false);
+    setSearchTerm("");
+  };
+
+  const handleSaveProfile = async (payload: {
+    fullName: string;
+    currentPassword?: string;
+    newPassword?: string;
+  }) => {
+    const response = await updateProfile(payload);
+    updateStoredUserFullName(response.fullName);
+    setUser((previous) => previous ? { ...previous, fullName: response.fullName } : previous);
   };
 
   if (!user) {
     return (
-      <main className="auth-layout">
-        <h1>ToDo Management</h1>
-        <p className="subtitle">Register or log in to manage your tasks.</p>
-        <div className="auth-grid">
-          <RegisterForm onAuthenticated={setUser} />
-          <LoginForm
-            onAuthenticated={setUser}
-            onForgotPasswordClick={() => setShowForgotPassword(true)}
-          />
-          <ResetPasswordForm />
-        </div>
-        {showForgotPassword && <ForgotPasswordForm />}
-      </main>
+      <Routes>
+        <Route
+          path="/"
+          element={(
+            <main className="auth-layout">
+              <h1>ToDo Management</h1>
+              <p className="subtitle">Log in to manage your tasks.</p>
+              <LoginForm
+                onAuthenticated={setUser}
+                onRegisterClick={() => navigate("/register")}
+                onForgotPasswordClick={() => navigate("/forgot-password")}
+              />
+            </main>
+          )}
+        />
+        <Route
+          path="/register"
+          element={(
+            <main className="auth-layout">
+              <h1>ToDo Management</h1>
+              <p className="subtitle">Create your account.</p>
+              <RegisterForm onAuthenticated={setUser} />
+            </main>
+          )}
+        />
+        <Route
+          path="/forgot-password"
+          element={(
+            <main className="auth-layout">
+              <h1>ToDo Management</h1>
+              <p className="subtitle">Request a password reset token.</p>
+              <ForgotPasswordForm
+                onRequestSucceeded={() => {
+                  setCanResetPassword(true);
+                  navigate("/reset-password");
+                }}
+              />
+            </main>
+          )}
+        />
+        <Route
+          path="/reset-password"
+          element={canResetPassword
+            ? (
+              <main className="auth-layout">
+                <h1>ToDo Management</h1>
+                <p className="subtitle">Set your new password.</p>
+                <ResetPasswordForm />
+              </main>
+            )
+            : <Navigate to="/forgot-password" replace />}
+        />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
     );
   }
 
   return (
-    <main className="app-layout">
-      <header>
-        <h1>Task Dashboard</h1>
-        <p>Logged in as {user.username}</p>
-        <button type="button" onClick={handleLogout} className="secondary">
-          Logout
-        </button>
-      </header>
+    <Routes>
+      <Route
+        path="/tasks"
+        element={(
+          <main className="app-layout">
+            <AppHeader
+              title="Task Dashboard"
+              fullName={user.fullName}
+              onLogout={handleLogout}
+              onProfileClick={() => navigate("/profile")}
+              rightActions={(
+                <button
+                  type="button"
+                  className="create-plus-button"
+                  title="Create new task"
+                  aria-label="Create new task"
+                  onClick={() => navigate("/create-task")}
+                >
+                  +
+                </button>
+              )}
+            />
 
-      <TaskForm submitLabel="Create Task" onSubmit={handleCreate} />
+            <label className="task-search">
+              Search Tasks
+              <input
+                value={searchTerm}
+                onChange={(event) => {
+                  setSearchTerm(event.target.value);
+                  setCompletedTasks(null);
+                }}
+                placeholder="Search title or description"
+              />
+            </label>
 
-      {loadingTasks && <p>Loading tasks...</p>}
-      {error && <p className="error">{error}</p>}
-      {!loadingTasks && (
-        <TaskList
-          tasks={tasks}
-          currentUser={user}
-          onToggleComplete={handleToggleComplete}
-          onDelete={handleDelete}
-          onUpdate={handleUpdate}
-        />
-      )}
-    </main>
+            {loadingOpenTasks && <p>Loading open tasks...</p>}
+            {error && <p className="error">{error}</p>}
+            {!loadingOpenTasks && (
+              <TaskList
+                tasks={openTasks}
+                currentUser={user}
+                onToggleComplete={handleToggleComplete}
+                onDelete={handleDelete}
+                onUpdate={handleUpdate}
+              />
+            )}
+
+            <section className="completed-section">
+              <button
+                type="button"
+                className="accordion-toggle"
+                onClick={() => setIsCompletedExpanded((value) => !value)}
+                aria-expanded={isCompletedExpanded}
+              >
+                Completed {isCompletedExpanded ? "▾" : "▸"}
+              </button>
+
+              {isCompletedExpanded && (
+                <>
+                  {loadingCompletedTasks && <p>Loading completed tasks...</p>}
+                  {!loadingCompletedTasks && (
+                    <TaskList
+                      tasks={completedTasks ?? []}
+                      currentUser={user}
+                      onToggleComplete={handleToggleComplete}
+                      onDelete={handleDelete}
+                      onUpdate={handleUpdate}
+                    />
+                  )}
+                </>
+              )}
+            </section>
+          </main>
+        )}
+      />
+      <Route
+        path="/create-task"
+        element={(
+          <main className="app-layout">
+            <AppHeader
+              title="Create Task"
+              fullName={user.fullName}
+              onLogout={handleLogout}
+              onProfileClick={() => navigate("/profile")}
+              onBack={() => navigate("/tasks")}
+            />
+
+            <TaskForm submitLabel="Create Task" onSubmit={handleCreate} />
+          </main>
+        )}
+      />
+      <Route
+        path="/profile"
+        element={(
+          <main className="app-layout">
+            <AppHeader
+              title="Profile"
+              fullName={user.fullName}
+              onLogout={handleLogout}
+              onProfileClick={() => navigate("/profile")}
+              onBack={() => navigate("/tasks")}
+            />
+
+            <ProfileForm user={user} onSave={handleSaveProfile} />
+          </main>
+        )}
+      />
+      <Route path="*" element={<Navigate to="/tasks" replace />} />
+    </Routes>
   );
 };
 

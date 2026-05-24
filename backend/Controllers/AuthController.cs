@@ -1,3 +1,5 @@
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -243,6 +245,48 @@ public sealed class AuthController : ControllerBase
         return Ok(new { message = "Password has been reset successfully." });
     }
 
+    [Authorize]
+    [HttpPut("profile")]
+    public async Task<ActionResult<ProfileResponse>> UpdateProfile(
+        UpdateProfileRequest request,
+        CancellationToken cancellationToken)
+    {
+        var userId = GetCurrentUserId();
+        if (userId is null)
+        {
+            return Unauthorized(new { message = "User context is missing from token." });
+        }
+
+        var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Id == userId.Value, cancellationToken);
+        if (user is null)
+        {
+            return NotFound(new { message = "User not found." });
+        }
+
+        user.FullName = request.FullName.Trim();
+
+        var newPassword = request.NewPassword?.Trim();
+        if (!string.IsNullOrWhiteSpace(newPassword))
+        {
+            var currentPassword = request.CurrentPassword ?? string.Empty;
+            if (!_passwordHasher.VerifyPassword(currentPassword, user.PasswordHash))
+            {
+                return BadRequest(new { message = "Current password is incorrect." });
+            }
+
+            user.PasswordHash = _passwordHasher.HashPassword(newPassword);
+        }
+
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
+        return Ok(new ProfileResponse
+        {
+            Id = user.Id,
+            FullName = user.FullName,
+            Username = user.Username
+        });
+    }
+
     private async Task<AuthResponse> IssueTokensAsync(User user, CancellationToken cancellationToken)
     {
         var nowUtc = _dateTimeService.UtcNow;
@@ -270,5 +314,11 @@ public sealed class AuthController : ControllerBase
             Token = _jwtTokenService.CreateToken(user),
             RefreshToken = refreshTokenValue
         };
+    }
+
+    private Guid? GetCurrentUserId()
+    {
+        var value = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        return Guid.TryParse(value, out var parsedId) ? parsedId : null;
     }
 }

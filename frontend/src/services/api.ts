@@ -32,6 +32,25 @@ interface ForgotPasswordResponse {
     resetToken?: string;
 }
 
+interface ProfileResponse {
+    id: string;
+    fullName: string;
+    username: string;
+}
+
+export type TaskStatusFilter = 'open' | 'completed' | 'all';
+
+interface GetTasksParams {
+    search?: string;
+    status?: TaskStatusFilter;
+}
+
+interface UpdateProfilePayload {
+    fullName: string;
+    currentPassword?: string;
+    newPassword?: string;
+}
+
 const persistAuth = (auth: AuthResponse): User => {
     localStorage.setItem(TOKEN_KEY, auth.token);
     localStorage.setItem(REFRESH_TOKEN_KEY, auth.refreshToken);
@@ -109,8 +128,23 @@ export const resetPassword = async (
     });
 };
 
-export const getTasks = async (): Promise<Task[]> => {
-    const response = await apiClient.get<Task[]>('/tasks');
+export const updateProfile = async (
+    payload: UpdateProfilePayload
+): Promise<ProfileResponse> => {
+    const response = await apiClient.put<ProfileResponse>(
+        '/auth/profile',
+        payload
+    );
+    return response.data;
+};
+
+export const getTasks = async (params?: GetTasksParams): Promise<Task[]> => {
+    const response = await apiClient.get<Task[]>('/tasks', {
+        params: {
+            search: params?.search?.trim() || undefined,
+            status: params?.status ?? 'all'
+        }
+    });
     return response.data;
 };
 
@@ -151,5 +185,25 @@ export const getStoredUser = (): User | null => {
         return { ...user, token, refreshToken };
     } catch {
         return null;
+    }
+};
+
+export const updateStoredUserFullName = (fullName: string): void => {
+    const rawUser = localStorage.getItem(USER_KEY);
+    if (!rawUser) {
+        return;
+    }
+
+    try {
+        const user = JSON.parse(rawUser) as User;
+        localStorage.setItem(
+            USER_KEY,
+            JSON.stringify({
+                ...user,
+                fullName
+            })
+        );
+    } catch {
+        // Ignore malformed local user cache.
     }
 };

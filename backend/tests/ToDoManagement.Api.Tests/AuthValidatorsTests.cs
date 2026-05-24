@@ -11,6 +11,7 @@ public sealed class AuthValidatorsTests
     private readonly RegisterRequestValidator _validator = new();
     private readonly ResetPasswordRequestValidator _resetPasswordValidator = new();
     private readonly ForgotPasswordRequestValidator _forgotPasswordValidator = new();
+    private readonly UpdateProfileRequestValidator _updateProfileValidator = new();
 
     [Theory]
     [InlineData("short1!", false)]
@@ -138,5 +139,45 @@ public sealed class AuthValidatorsTests
         result.IsValid.Should().BeFalse();
         result.Errors.Select(e => e.ErrorMessage)
             .Should().Contain("Reset token is required.");
+    }
+
+    [Fact]
+    public void UpdateProfileRequestValidator_Should_RequireCurrentPassword_WhenSettingNewPassword()
+    {
+        // ARRANGE
+        var request = new UpdateProfileRequest
+        {
+            FullName = "Alice Johnson",
+            CurrentPassword = string.Empty,
+            NewPassword = "NewStrong1!"
+        };
+
+        // ACT
+        var result = _updateProfileValidator.Validate(request);
+
+        // ASSERT
+        using var scope = new AssertionScope();
+        result.IsValid.Should().BeFalse();
+        result.Errors.Select(e => e.ErrorMessage)
+            .Should().Contain("Current password is required to set a new password.");
+    }
+
+    [Fact]
+    public void UpdateProfileRequestValidator_Should_AllowFullNameOnlyUpdates()
+    {
+        // ARRANGE
+        var request = new UpdateProfileRequest
+        {
+            FullName = "Alice Johnson",
+            CurrentPassword = string.Empty,
+            NewPassword = string.Empty
+        };
+
+        // ACT
+        var result = _updateProfileValidator.Validate(request);
+
+        // ASSERT
+        using var scope = new AssertionScope();
+        result.IsValid.Should().BeTrue();
     }
 }
