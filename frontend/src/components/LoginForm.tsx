@@ -4,9 +4,10 @@ import { login } from "../services/api";
 
 interface LoginFormProps {
   onAuthenticated: (user: User) => void;
+  onForgotPasswordClick: () => void;
 }
 
-export const LoginForm = ({ onAuthenticated }: LoginFormProps): JSX.Element => {
+export const LoginForm = ({ onAuthenticated, onForgotPasswordClick }: LoginFormProps): JSX.Element => {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -47,6 +48,9 @@ export const LoginForm = ({ onAuthenticated }: LoginFormProps): JSX.Element => {
           onChange={(e) => setPassword(e.target.value)}
         />
       </label>
+      <button type="button" className="link-button" onClick={onForgotPasswordClick}>
+        Forgot Password?
+      </button>
       {error && <p className="error">{error}</p>}
       <button type="submit" disabled={loading}>
         {loading ? "Signing in..." : "Login"}

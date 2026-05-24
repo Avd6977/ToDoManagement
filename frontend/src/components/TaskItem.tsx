@@ -20,7 +20,6 @@ export const TaskItem = ({
 }: TaskItemProps): JSX.Element => {
   const [isEditing, setIsEditing] = useState(false);
   const [error, setError] = useState("");
-  const isOwner = task.ownerId === currentUser.id;
 
   const handleToggle = async () => {
     setError("");
@@ -56,23 +55,18 @@ export const TaskItem = ({
           <h4>{task.title}</h4>
           <p>{task.description || "No description"}</p>
           <p>Due: {task.dueDate ? new Date(task.dueDate).toLocaleDateString() : "None"}</p>
-          <p>Owner: {task.ownerId}</p>
-          <p>Assigned: {task.assignedToId ?? "Unassigned"}</p>
 
           <div className="actions">
-            {isOwner && (
-              <button type="button" onClick={() => setIsEditing(true)} className="secondary">
-                Edit
-              </button>
-            )}
-            <button type="button" onClick={handleToggle} disabled={!isOwner}>
+            <button type="button" onClick={() => setIsEditing(true)} className="secondary">
+              Edit
+            </button>
+            <button type="button" onClick={handleToggle}>
               {task.isCompleted ? "Mark Incomplete" : "Mark Complete"}
             </button>
-            <button type="button" onClick={handleDelete} disabled={!isOwner} className="danger">
+            <button type="button" onClick={handleDelete} className="danger">
               Delete
             </button>
           </div>
-          {!isOwner && <p className="hint">Only the owner can edit, complete, or delete this task.</p>}
           {error && <p className="error">{error}</p>}
         </>
       ) : (

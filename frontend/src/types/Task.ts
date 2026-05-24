@@ -4,6 +4,4 @@ export interface Task {
     description: string;
     dueDate: string | null;
     isCompleted: boolean;
-    ownerId: string;
-    assignedToId: string | null;
 }

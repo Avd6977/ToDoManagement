@@ -22,6 +22,7 @@ const App = (): JSX.Element => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [error, setError] = useState("");
   const [loadingTasks, setLoadingTasks] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
 
   const loadTasks = async () => {
     if (!user) {
@@ -79,10 +80,13 @@ const App = (): JSX.Element => {
         <p className="subtitle">Register or log in to manage your tasks.</p>
         <div className="auth-grid">
           <RegisterForm onAuthenticated={setUser} />
-          <LoginForm onAuthenticated={setUser} />
-          <ForgotPasswordForm />
+          <LoginForm
+            onAuthenticated={setUser}
+            onForgotPasswordClick={() => setShowForgotPassword(true)}
+          />
           <ResetPasswordForm />
         </div>
+        {showForgotPassword && <ForgotPasswordForm />}
       </main>
     );
   }

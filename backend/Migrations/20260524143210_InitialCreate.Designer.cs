@@ -11,7 +11,7 @@ using ToDoManagement.Api.Data;
 namespace ToDoManagement.Api.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260524021454_InitialCreate")]
+    [Migration("20260524143210_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -93,12 +93,6 @@ namespace ToDoManagement.Api.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("TEXT");
 
-                    b.Property<Guid?>("AssignedToId")
-                        .HasColumnType("TEXT");
-
-                    b.Property<Guid>("CreatedBy")
-                        .HasColumnType("TEXT");
-
                     b.Property<DateTime>("CreatedDateUtc")
                         .HasColumnType("TEXT");
 
@@ -119,15 +113,10 @@ namespace ToDoManagement.Api.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
-                    b.Property<Guid>("UpdatedBy")
-                        .HasColumnType("TEXT");
-
                     b.Property<DateTime>("UpdatedDateUtc")
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("AssignedToId");
 
                     b.HasIndex("OwnerId");
 
@@ -138,12 +127,6 @@ namespace ToDoManagement.Api.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT");
-
-                    b.Property<Guid?>("AssignedToId")
-                        .HasColumnType("TEXT");
-
-                    b.Property<Guid>("CreatedBy")
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("CreatedDateUtc")
@@ -171,9 +154,6 @@ namespace ToDoManagement.Api.Migrations
 
                     b.Property<string>("Title")
                         .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<Guid>("UpdatedBy")
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("UpdatedDateUtc")
@@ -241,11 +221,6 @@ namespace ToDoManagement.Api.Migrations
 
             modelBuilder.Entity("ToDoManagement.Api.Models.TaskItem", b =>
                 {
-                    b.HasOne("ToDoManagement.Api.Models.User", null)
-                        .WithMany()
-                        .HasForeignKey("AssignedToId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
                     b.HasOne("ToDoManagement.Api.Models.User", null)
                         .WithMany()
                         .HasForeignKey("OwnerId")

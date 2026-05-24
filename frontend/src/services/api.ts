@@ -1,6 +1,6 @@
 import axios from 'axios';
 import type { Task } from '../types/Task';
-import type { User, UserOption } from '../types/User';
+import type { User } from '../types/User';
 
 const API_BASE_URL = 'http://localhost:5000/api';
 const TOKEN_KEY = 'todo_jwt';
@@ -129,13 +129,6 @@ export const updateTask = async (
 
 export const deleteTask = async (id: string): Promise<void> => {
     await apiClient.delete(`/tasks/${id}`);
-};
-
-export const searchUsers = async (query: string): Promise<UserOption[]> => {
-    const response = await apiClient.get<UserOption[]>('/users/search', {
-        params: { query }
-    });
-    return response.data;
 };
 
 export const logout = (): void => {

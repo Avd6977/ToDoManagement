@@ -23,8 +23,7 @@ Full-stack task management application with:
   - At least 1 number
   - At least 1 special character
 - Passwords are stored at rest as salted PBKDF2 (SHA-256) hashes, never plaintext.
-- Authenticated task CRUD with ownership/assignee access boundaries.
-- Dedicated `FullName` field on `User` (`VARCHAR(100)`) and fuzzy assignee search.
+- Authenticated task CRUD scoped to the logged-in user.
 - Task audit metadata:
   - `CreatedBy`, `CreatedDateUtc`
   - `UpdatedBy`, `UpdatedDateUtc`
@@ -245,26 +244,18 @@ sequenceDiagram
 7. Reset token is marked used.
 8. All active refresh tokens for that user are revoked, forcing re-authentication on other sessions.
 
-## User Search Endpoint
-
-All endpoints require Bearer token.
-
-- `GET /api/users/search?query=<text>`
-  - Returns key/value user options: `{ id, fullName, username }`
-  - Supports fuzzy matching against full name and username.
-
 ## Task Endpoints
 
 All endpoints require Bearer token.
 
 - `GET /api/tasks`
-  - Returns tasks where current user is owner or assignee.
+  - Returns tasks owned by the current user.
 - `POST /api/tasks`
-  - Body: `{ title, description, dueDate?, assignedToId? }`
-  - `assignedToId` defaults to current user when omitted.
+  - Body: `{ title, description, dueDate? }`
+  - The task is always owned by the current user.
 - `PUT /api/tasks/{id}`
   - Owner-only.
-  - Body: `{ title, description, dueDate?, isCompleted, assignedToId? }`
+  - Body: `{ title, description, dueDate?, isCompleted }`
 - `DELETE /api/tasks/{id}`
   - Owner-only.
 
@@ -273,7 +264,7 @@ Task responses include: `{ createdBy, createdDateUtc, updatedBy, updatedDateUtc 
 ## Frontend Notes
 
 - Auth screen now includes Register, Login, Forgot Password, and Reset Password forms.
-- Assignee field uses server-backed search with `id`/`fullName` options.
+- Tasks are owned only by the logged-in user.
 - JWT is stored client-side and sent as `Authorization: Bearer <token>`.
 
 ## Testing

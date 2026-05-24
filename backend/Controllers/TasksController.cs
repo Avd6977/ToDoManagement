@@ -33,7 +33,7 @@ public sealed class TasksController : ControllerBase
         }
 
         var tasks = await _dbContext.Tasks
-            .Where(t => t.OwnerId == userId.Value || t.AssignedToId == userId.Value)
+            .Where(t => t.OwnerId == userId.Value)
             .OrderBy(t => t.IsCompleted)
             .ThenBy(t => t.DueDate)
             .Select(t => new TaskResponse
@@ -44,7 +44,8 @@ public sealed class TasksController : ControllerBase
                 DueDate = t.DueDate,
                 IsCompleted = t.IsCompleted,
                 OwnerId = t.OwnerId,
-                AssignedToId = t.AssignedToId
+                CreatedDateUtc = t.CreatedDateUtc,
+                UpdatedDateUtc = t.UpdatedDateUtc
             })
             .ToListAsync(cancellationToken);
 
@@ -60,13 +61,6 @@ public sealed class TasksController : ControllerBase
             return Unauthorized(new { message = "User context is missing from token." });
         }
 
-        var assignedToId = request.AssignedToId ?? userId.Value;
-        var assigneeExists = await _dbContext.Users.AnyAsync(u => u.Id == assignedToId, cancellationToken);
-        if (!assigneeExists)
-        {
-            return BadRequest(new { message = "Assigned user does not exist." });
-        }
-
         var nowUtc = _dateTimeService.UtcNow;
 
         var task = new TaskItem
@@ -77,10 +71,7 @@ public sealed class TasksController : ControllerBase
             DueDate = request.DueDate,
             IsCompleted = false,
             OwnerId = userId.Value,
-            AssignedToId = assignedToId,
-            CreatedBy = userId.Value,
             CreatedDateUtc = nowUtc,
-            UpdatedBy = userId.Value,
             UpdatedDateUtc = nowUtc
         };
 
@@ -111,15 +102,6 @@ public sealed class TasksController : ControllerBase
             return StatusCode(StatusCodes.Status403Forbidden, new { message = "Only the owner can update this task." });
         }
 
-        if (request.AssignedToId.HasValue)
-        {
-            var assigneeExists = await _dbContext.Users.AnyAsync(u => u.Id == request.AssignedToId.Value, cancellationToken);
-            if (!assigneeExists)
-            {
-                return BadRequest(new { message = "Assigned user does not exist." });
-            }
-        }
-
         var nowUtc = _dateTimeService.UtcNow;
         AddHistory(task, nowUtc, "UPDATE");
 
@@ -127,8 +109,6 @@ public sealed class TasksController : ControllerBase
         task.Description = request.Description.Trim();
         task.DueDate = request.DueDate;
         task.IsCompleted = request.IsCompleted;
-        task.AssignedToId = request.AssignedToId;
-        task.UpdatedBy = userId.Value;
         task.UpdatedDateUtc = nowUtc;
 
         await _dbContext.SaveChangesAsync(cancellationToken);
@@ -175,10 +155,7 @@ public sealed class TasksController : ControllerBase
         DueDate = task.DueDate,
         IsCompleted = task.IsCompleted,
         OwnerId = task.OwnerId,
-        AssignedToId = task.AssignedToId,
-        CreatedBy = task.CreatedBy,
         CreatedDateUtc = task.CreatedDateUtc,
-        UpdatedBy = task.UpdatedBy,
         UpdatedDateUtc = task.UpdatedDateUtc
     };
 
@@ -197,10 +174,7 @@ public sealed class TasksController : ControllerBase
             DueDate = task.DueDate,
             IsCompleted = task.IsCompleted,
             OwnerId = task.OwnerId,
-            AssignedToId = task.AssignedToId,
-            CreatedBy = task.CreatedBy,
             CreatedDateUtc = task.CreatedDateUtc,
-            UpdatedBy = task.UpdatedBy,
             UpdatedDateUtc = task.UpdatedDateUtc,
             ValidFromUtc = validFromUtc,
             ValidToUtc = validToUtc,

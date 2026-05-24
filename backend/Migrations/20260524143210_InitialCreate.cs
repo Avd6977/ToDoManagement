@@ -22,10 +22,7 @@ namespace ToDoManagement.Api.Migrations
                     DueDate = table.Column<DateTime>(type: "TEXT", nullable: true),
                     IsCompleted = table.Column<bool>(type: "INTEGER", nullable: false),
                     OwnerId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    AssignedToId = table.Column<Guid>(type: "TEXT", nullable: true),
-                    CreatedBy = table.Column<Guid>(type: "TEXT", nullable: false),
                     CreatedDateUtc = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    UpdatedBy = table.Column<Guid>(type: "TEXT", nullable: false),
                     UpdatedDateUtc = table.Column<DateTime>(type: "TEXT", nullable: false),
                     ValidFromUtc = table.Column<DateTime>(type: "TEXT", nullable: false),
                     ValidToUtc = table.Column<DateTime>(type: "TEXT", nullable: false),
@@ -105,21 +102,12 @@ namespace ToDoManagement.Api.Migrations
                     DueDate = table.Column<DateTime>(type: "TEXT", nullable: true),
                     IsCompleted = table.Column<bool>(type: "INTEGER", nullable: false),
                     OwnerId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    AssignedToId = table.Column<Guid>(type: "TEXT", nullable: true),
-                    CreatedBy = table.Column<Guid>(type: "TEXT", nullable: false),
                     CreatedDateUtc = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    UpdatedBy = table.Column<Guid>(type: "TEXT", nullable: false),
                     UpdatedDateUtc = table.Column<DateTime>(type: "TEXT", nullable: false)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Tasks", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_Tasks_Users_AssignedToId",
-                        column: x => x.AssignedToId,
-                        principalTable: "Users",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.SetNull);
                     table.ForeignKey(
                         name: "FK_Tasks_Users_OwnerId",
                         column: x => x.OwnerId,
@@ -154,11 +142,6 @@ namespace ToDoManagement.Api.Migrations
                 name: "IX_TaskHistory_TaskId_ValidFromUtc",
                 table: "TaskHistory",
                 columns: new[] { "TaskId", "ValidFromUtc" });
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Tasks_AssignedToId",
-                table: "Tasks",
-                column: "AssignedToId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Tasks_OwnerId",

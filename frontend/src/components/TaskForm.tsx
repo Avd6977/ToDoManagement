@@ -1,7 +1,5 @@
-import { FormEvent, useEffect, useState } from "react";
-import { searchUsers } from "../services/api";
+import { FormEvent, useState } from "react";
 import type { Task } from "../types/Task";
-import type { UserOption } from "../types/User";
 
 interface TaskFormProps {
   onSubmit: (task: Partial<Task>) => Promise<void>;
@@ -27,43 +25,8 @@ export const TaskForm = ({
   const [title, setTitle] = useState(initialValue?.title ?? "");
   const [description, setDescription] = useState(initialValue?.description ?? "");
   const [dueDate, setDueDate] = useState(toDateInputValue(initialValue?.dueDate));
-  const [assignedToId, setAssignedToId] = useState(initialValue?.assignedToId ?? "");
-  const [assigneeQuery, setAssigneeQuery] = useState("");
-  const [assigneeOptions, setAssigneeOptions] = useState<UserOption[]>([]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    const runSearch = async () => {
-      const query = assigneeQuery.trim();
-      if (!query) {
-        setAssigneeOptions([]);
-        return;
-      }
-
-      try {
-        const results = await searchUsers(query);
-        if (!cancelled) {
-          setAssigneeOptions(results);
-        }
-      } catch {
-        if (!cancelled) {
-          setAssigneeOptions([]);
-        }
-      }
-    };
-
-    const timeoutId = window.setTimeout(() => {
-      void runSearch();
-    }, 250);
-
-    return () => {
-      cancelled = true;
-      window.clearTimeout(timeoutId);
-    };
-  }, [assigneeQuery]);
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -90,14 +53,10 @@ export const TaskForm = ({
         title: title.trim(),
         description: description.trim(),
         dueDate: dueDate ? new Date(`${dueDate}T00:00:00`).toISOString() : null,
-        assignedToId: assignedToId.trim() || null,
       });
       setTitle("");
       setDescription("");
       setDueDate("");
-      setAssignedToId("");
-      setAssigneeQuery("");
-      setAssigneeOptions([]);
     } catch (err: any) {
       setError(err?.response?.data?.message ?? "Task request failed.");
     } finally {
@@ -120,34 +79,6 @@ export const TaskForm = ({
         Due Date
         <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
       </label>
-      <label>
-        Assigned User (optional)
-        <input
-          placeholder="Search by full name"
-          value={assigneeQuery}
-          onChange={(e) => setAssigneeQuery(e.target.value)}
-        />
-      </label>
-      {!!assigneeOptions.length && (
-        <ul className="assignee-results">
-          {assigneeOptions.map((option) => (
-            <li key={option.id}>
-              <button
-                type="button"
-                className="secondary"
-                onClick={() => {
-                  setAssignedToId(option.id);
-                  setAssigneeQuery(option.fullName);
-                  setAssigneeOptions([]);
-                }}
-              >
-                {option.fullName} ({option.id})
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-      {assignedToId && <p className="hint">Selected key: {assignedToId}</p>}
       {error && <p className="error">{error}</p>}
       <div className="actions">
         <button type="submit" disabled={loading}>

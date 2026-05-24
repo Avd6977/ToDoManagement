@@ -36,12 +36,6 @@ public sealed class AppDbContext : DbContext
             .HasForeignKey(t => t.OwnerId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        modelBuilder.Entity<TaskItem>()
-            .HasOne<User>()
-            .WithMany()
-            .HasForeignKey(t => t.AssignedToId)
-            .OnDelete(DeleteBehavior.SetNull);
-
         modelBuilder.Entity<RefreshToken>()
             .HasIndex(t => t.TokenHash)
             .IsUnique();

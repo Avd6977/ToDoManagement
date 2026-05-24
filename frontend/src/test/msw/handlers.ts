@@ -17,9 +17,7 @@ export const handlers = [
                 title: 'Mock Task',
                 description: 'From MSW',
                 dueDate: null,
-                isCompleted: false,
-                ownerId: '11111111-1111-1111-1111-111111111111',
-                assignedToId: '11111111-1111-1111-1111-111111111111'
+                isCompleted: false
             }
         ])
     ),
