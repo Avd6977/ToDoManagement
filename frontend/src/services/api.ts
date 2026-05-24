@@ -4,6 +4,7 @@ import type { User, UserOption } from '../types/User';
 
 const API_BASE_URL = 'http://localhost:5000/api';
 const TOKEN_KEY = 'todo_jwt';
+const REFRESH_TOKEN_KEY = 'todo_refresh_token';
 const USER_KEY = 'todo_user';
 
 const apiClient = axios.create({
@@ -20,24 +21,44 @@ apiClient.interceptors.request.use((config) => {
 
 interface AuthResponse {
     id: string;
+    fullName: string;
     username: string;
     token: string;
+    refreshToken: string;
+}
+
+interface ForgotPasswordResponse {
+    message: string;
+    resetToken?: string;
 }
 
 const persistAuth = (auth: AuthResponse): User => {
     localStorage.setItem(TOKEN_KEY, auth.token);
+    localStorage.setItem(REFRESH_TOKEN_KEY, auth.refreshToken);
     localStorage.setItem(
         USER_KEY,
-        JSON.stringify({ id: auth.id, username: auth.username })
+        JSON.stringify({
+            id: auth.id,
+            fullName: auth.fullName,
+            username: auth.username
+        })
     );
-    return { id: auth.id, username: auth.username, token: auth.token };
+    return {
+        id: auth.id,
+        fullName: auth.fullName,
+        username: auth.username,
+        token: auth.token,
+        refreshToken: auth.refreshToken
+    };
 };
 
 export const register = async (
+    fullName: string,
     username: string,
     password: string
 ): Promise<User> => {
     const response = await apiClient.post<AuthResponse>('/auth/register', {
+        fullName,
         username,
         password
     });
@@ -53,6 +74,39 @@ export const login = async (
         password
     });
     return persistAuth(response.data);
+};
+
+export const refresh = async (refreshToken: string): Promise<User> => {
+    const response = await apiClient.post<AuthResponse>('/auth/refresh', {
+        refreshToken
+    });
+    return persistAuth(response.data);
+};
+
+export const revoke = async (refreshToken: string): Promise<void> => {
+    await apiClient.post('/auth/revoke', { refreshToken });
+};
+
+export const forgotPassword = async (
+    username: string
+): Promise<ForgotPasswordResponse> => {
+    const response = await apiClient.post<ForgotPasswordResponse>(
+        '/auth/forgot-password',
+        {
+            username
+        }
+    );
+    return response.data;
+};
+
+export const resetPassword = async (
+    resetToken: string,
+    newPassword: string
+): Promise<void> => {
+    await apiClient.post('/auth/reset-password', {
+        resetToken,
+        newPassword
+    });
 };
 
 export const getTasks = async (): Promise<Task[]> => {
@@ -86,20 +140,22 @@ export const searchUsers = async (query: string): Promise<UserOption[]> => {
 
 export const logout = (): void => {
     localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(REFRESH_TOKEN_KEY);
     localStorage.removeItem(USER_KEY);
 };
 
 export const getStoredUser = (): User | null => {
     const rawUser = localStorage.getItem(USER_KEY);
     const token = localStorage.getItem(TOKEN_KEY);
+    const refreshToken = localStorage.getItem(REFRESH_TOKEN_KEY);
 
-    if (!rawUser || !token) {
+    if (!rawUser || !token || !refreshToken) {
         return null;
     }
 
     try {
         const user = JSON.parse(rawUser) as User;
-        return { ...user, token };
+        return { ...user, token, refreshToken };
     } catch {
         return null;
     }

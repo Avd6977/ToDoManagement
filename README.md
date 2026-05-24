@@ -2,21 +2,30 @@
 
 Full-stack task management application with:
 - Backend: .NET 7 Web API, EF Core + SQLite, JWT authentication
-- Frontend: React + TypeScript + Axios
+- Frontend: React + TypeScript + Vite + Axios
 
 ## Features
 
-- User registration and login with JWT issuance
-- Authenticated task CRUD
-- Tasks are scoped to authenticated user:
-	- `GET /api/tasks` returns tasks owned by or assigned to current user
-	- `POST /api/tasks` creates task owned by current user, default assigned to current user
-	- `PUT /api/tasks/{id}` updates task, owner-only
-	- `DELETE /api/tasks/{id}` deletes task, owner-only
-- Input validation for auth and task payloads
-- Meaningful API error messages for common failure cases
-- Frontend stores JWT and automatically sends `Authorization: Bearer <token>`
-- Immediate UI updates after create/update/delete
+- User registration and login with JWT access token + refresh token issuance.
+- Refresh token rotation (`POST /api/auth/refresh`) and explicit revocation (`POST /api/auth/revoke`).
+- Forgot/reset password flow with one-time reset tokens:
+  - `POST /api/auth/forgot-password` invalidates any existing active reset tokens for the user, creates a new token, stores only a hash, and returns a generic success response.
+  - `POST /api/auth/reset-password` validates one-time token usage/expiration, resets password, marks token used, and revokes all active refresh tokens for that user.
+- Password policy enforcement on register and reset:
+  - Minimum 8 characters
+  - At least 1 letter
+  - At least 1 number
+  - At least 1 special character
+- Passwords are stored at rest as salted PBKDF2 (SHA-256) hashes, never plaintext.
+- Authenticated task CRUD with ownership/assignee access boundaries.
+- Dedicated `FullName` field on `User` (`VARCHAR(100)`) and fuzzy assignee search.
+- Task audit metadata:
+  - `CreatedBy`, `CreatedDateUtc`
+  - `UpdatedBy`, `UpdatedDateUtc`
+- Application-managed temporal history (`TaskItemHistory`) for update/delete snapshots.
+- Strongly typed JWT settings via `JwtTokenDto` (`IOptions<JwtTokenDto>`).
+- Automatic schema creation on startup (uses `Database.EnsureCreated()` when database does not exist).
+- Validation using FluentValidation for auth and task payloads.
 
 ## Project Structure
 
@@ -24,55 +33,26 @@ Full-stack task management application with:
 ToDoManagement/
 ├── backend/
 │   ├── Controllers/
-│   │   ├── AuthController.cs
-│   │   └── TasksController.cs
 │   ├── Data/
-│   │   └── AppDbContext.cs
 │   ├── Dtos/
-│   │   ├── AuthDtos.cs
-│   │   └── TaskDtos.cs
 │   ├── Models/
-│   │   ├── TaskItem.cs
-│   │   └── User.cs
 │   ├── Services/
-│   │   ├── DateTimeService.cs
-│   │   ├── IDateTimeService.cs
-│   │   ├── IJwtTokenService.cs
-│   │   ├── IPasswordHasherService.cs
-│   │   ├── JwtTokenService.cs
-│   │   └── PasswordHasherService.cs
 │   ├── Validators/
-│   │   ├── AuthValidators.cs
-│   │   └── TaskValidators.cs
-│   ├── Program.cs
-│   ├── ToDoManagement.Api.csproj
-│   └── appsettings.json
+│   └── tests/
 ├── frontend/
 │   ├── src/
 │   │   ├── components/
-│   │   │   ├── LoginForm.tsx
-│   │   │   ├── RegisterForm.tsx
-│   │   │   ├── TaskForm.tsx
-│   │   │   ├── TaskItem.tsx
-│   │   │   └── TaskList.tsx
 │   │   ├── services/
-│   │   │   └── api.ts
+│   │   ├── test/
 │   │   ├── types/
-│   │   │   ├── Task.ts
-│   │   │   └── User.ts
-│   │   ├── App.tsx
-│   │   ├── index.tsx
-│   │   └── styles.css
-│   ├── index.html
-│   ├── package.json
-│   ├── tsconfig.json
-│   └── vite.config.ts
-└── README.md
+│   │   └── ...
+│   └── ...
+└── ...
 ```
 
 ## Backend Setup
 
-1. Open terminal in `backend/`
+1. Open terminal in `backend/`.
 2. Restore and build:
 
 ```bash
@@ -91,9 +71,78 @@ dotnet run
 
 Swagger is enabled in Development.
 
+## EF Migrations
+
+This project uses EF Core migrations for schema changes over time (including SQLite).
+
+### Required Packages and Tools
+
+From `backend/ToDoManagement.Api.csproj`:
+
+- `Microsoft.EntityFrameworkCore.Sqlite`
+- `Microsoft.EntityFrameworkCore.Design`
+
+CLI tool required to scaffold/apply migrations:
+
+```bash
+dotnet tool install --global dotnet-ef
+dotnet tool update --global dotnet-ef
+dotnet ef --version
+```
+
+If your machine cannot use global tools, install a local tool manifest and local `dotnet-ef` tool.
+
+### Generate a Migration
+
+Run from `backend/`:
+
+```bash
+dotnet ef migrations add <MigrationName>
+```
+
+Example for the `FullName` column update:
+
+```bash
+dotnet ef migrations add AddUserFullNameColumn
+```
+
+### Apply Migrations to the Database
+
+Run from `backend/`:
+
+```bash
+dotnet ef database update
+```
+
+### Useful Migration Commands
+
+List migrations:
+
+```bash
+dotnet ef migrations list
+```
+
+Rollback to a previous migration (or `0` for empty schema):
+
+```bash
+dotnet ef database update <MigrationNameOr0>
+```
+
+Remove the last migration (before it is applied to shared environments):
+
+```bash
+dotnet ef migrations remove
+```
+
+### Notes for This Repository
+
+- `User.FullName` is configured as `VARCHAR(100)` to align with the UI's 100-character limit.
+- The migration files are located under `backend/Migrations/`.
+- For existing local databases created before this column existed, run `dotnet ef database update` to add the missing column.
+
 ## Frontend Setup
 
-1. Open terminal in `frontend/`
+1. Open terminal in `frontend/`.
 2. Install dependencies:
 
 ```bash
@@ -106,49 +155,163 @@ npm install
 npm run dev
 ```
 
-4. Open Vite URL shown in terminal (default `http://localhost:5173`)
+4. Open Vite URL shown in terminal (default `http://localhost:5173`).
+
+## Database Initialization
+
+This project no longer requires EF migration tooling to run locally.
+
+- Database provider: SQLite (`backend/tasks.db`)
+- Initialization strategy: `EnsureCreated()` at API startup
+- Result: if the database file is missing, schema is created from the current model automatically
 
 ## Authentication Endpoints
 
 - `POST /api/auth/register`
-	- Body: `{ "username": "string", "password": "string" }`
-	- Returns: `{ id, username, token }`
+  - Body: `{ "fullName": "string", "username": "string", "password": "string" }`
+  - Returns: `{ id, fullName, username, token, refreshToken }`
 - `POST /api/auth/login`
-	- Body: `{ "username": "string", "password": "string" }`
-	- Returns: `{ id, username, token }`
+  - Body: `{ "username": "string", "password": "string" }`
+  - Returns: `{ id, fullName, username, token, refreshToken }`
+- `POST /api/auth/refresh`
+  - Body: `{ "refreshToken": "string" }`
+  - Returns: `{ id, fullName, username, token, refreshToken }`
+  - Behavior: revokes the previous refresh token and issues a new one.
+- `POST /api/auth/revoke`
+  - Body: `{ "refreshToken": "string" }`
+  - Revokes the specified refresh token.
+- `POST /api/auth/forgot-password`
+  - Body: `{ "username": "string" }`
+  - Returns generic success message to reduce account enumeration risk.
+  - Demo behavior: also returns a `resetToken` so flow can be tested without email integration.
+- `POST /api/auth/reset-password`
+  - Body: `{ "resetToken": "string", "newPassword": "string" }`
+  - Validates one-time reset token, updates password hash, marks token used, and revokes all active refresh tokens for that user.
+
+## Forgot Password Flow (Detailed)
+
+### Sequence Diagram
+
+```mermaid
+sequenceDiagram
+  participant U as User
+  participant UI as Frontend UI
+  participant API as Auth API
+  participant DB as Database
+
+  U->>UI: Submit username (forgot password)
+  UI->>API: POST /api/auth/forgot-password
+  API->>DB: Find user by username
+  alt User exists
+    API->>DB: Mark active reset tokens as used
+    API->>DB: Create new hashed reset token (30 min)
+    API-->>UI: 200 + generic message + resetToken (demo)
+  else User not found
+    API-->>UI: 200 + generic message
+  end
+  UI-->>U: Show generic success message
+
+  U->>UI: Submit resetToken + newPassword
+  UI->>API: POST /api/auth/reset-password
+  API->>DB: Validate token (exists, active, not used)
+  alt Token valid
+    API->>DB: Update password hash
+    API->>DB: Mark reset token used
+    API->>DB: Revoke all active refresh tokens
+    API-->>UI: 200 Password reset successful
+  else Token invalid/expired/used
+    API-->>UI: 400 Reset token invalid
+  end
+  UI-->>U: Display result
+```
+
+1. User submits username to `POST /api/auth/forgot-password`.
+2. API always returns a generic success message, whether user exists or not.
+3. If user exists:
+   - Any active reset tokens for the user are marked used.
+   - New reset token is generated.
+   - Only token hash is stored in `PasswordResetTokens` with 30-minute expiry.
+   - Plain reset token is returned in response for local/demo usage.
+4. User submits reset token + new password to `POST /api/auth/reset-password`.
+5. API verifies token exists, is not expired, and has not been used.
+6. Password hash is replaced with new PBKDF2 hash.
+7. Reset token is marked used.
+8. All active refresh tokens for that user are revoked, forcing re-authentication on other sessions.
+
+## User Search Endpoint
+
+All endpoints require Bearer token.
+
+- `GET /api/users/search?query=<text>`
+  - Returns key/value user options: `{ id, fullName, username }`
+  - Supports fuzzy matching against full name and username.
 
 ## Task Endpoints
 
 All endpoints require Bearer token.
 
 - `GET /api/tasks`
-	- Returns tasks where current user is owner or assignee
+  - Returns tasks where current user is owner or assignee.
 - `POST /api/tasks`
-	- Body: `{ title, description, dueDate?, assignedToId? }`
-	- `assignedToId` defaults to current user when omitted
+  - Body: `{ title, description, dueDate?, assignedToId? }`
+  - `assignedToId` defaults to current user when omitted.
 - `PUT /api/tasks/{id}`
-	- Owner-only
-	- Body: `{ title, description, dueDate?, isCompleted, assignedToId? }`
+  - Owner-only.
+  - Body: `{ title, description, dueDate?, isCompleted, assignedToId? }`
 - `DELETE /api/tasks/{id}`
-	- Owner-only
+  - Owner-only.
+
+Task responses include: `{ createdBy, createdDateUtc, updatedBy, updatedDateUtc }`.
+
+## Frontend Notes
+
+- Auth screen now includes Register, Login, Forgot Password, and Reset Password forms.
+- Assignee field uses server-backed search with `id`/`fullName` options.
+- JWT is stored client-side and sent as `Authorization: Bearer <token>`.
+
+## Testing
+
+### Backend Tests (xUnit + FluentAssertions)
+
+Run from `backend/`:
+
+```bash
+dotnet test .\tests\ToDoManagement.Api.Tests\ToDoManagement.Api.Tests.csproj --property:WarningLevel=0 --logger "console;verbosity=minimal"
+```
+
+Coverage includes:
+- Auth payload and password policy validation.
+- Password hashing/verification behavior.
+- Password reset token activity rules.
+
+### Frontend Tests (Vitest + Testing Library + MSW)
+
+Run from `frontend/`:
+
+```bash
+npm run test
+```
+
+Coverage includes:
+- Registration form behavior.
+- Forgot/reset password form behavior.
+- API service calls with MSW handlers.
 
 ## Assumptions
 
-- UI uses `assignedToId` (GUID) directly for assignment input to keep backend surface minimal and avoid extra directory endpoints.
-- Task completion toggle is owner-only because update is owner-only by requirement.
-- SQLite is used for persistence (`tasks.db`) for a simple local full-stack setup.
+- SQLite is used for local persistence (`tasks.db`).
+- SQLite does not provide SQL Server temporal tables, so temporal behavior is application-managed via `TaskItemHistory`.
+- Forgot-password email delivery is intentionally out of scope for this repo; token return is demo-only.
 
 ## Limitations
 
-- No refresh-token flow; JWT is stored in `localStorage`.
-- No user lookup endpoint for username-to-ID resolution in assignment UI.
+- Refresh token and access token are stored in browser `localStorage` for demo simplicity.
 - No pagination/filtering for task lists.
 - Single environment-focused configuration.
 
 ## Future Improvements
 
-- Add refresh tokens and token revocation.
-- Add user search endpoint and assign-by-username UX.
-- Add role-based authorization and audit fields.
-- Add automated tests (unit/integration and component tests).
-- Add Docker and CI pipeline configuration.
+- Replace demo reset-token return with real email/SMS provider integration.
+- Add rate limiting and abuse protections around auth endpoints.
+- Add integration tests for auth controller and token lifecycle.
+- Add role-based authorization and stricter revoke authorization semantics.

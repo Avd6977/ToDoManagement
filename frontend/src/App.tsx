@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import "./styles.css";
 import { LoginForm } from "./components/LoginForm";
 import { RegisterForm } from "./components/RegisterForm";
+import { ForgotPasswordForm } from "./components/ForgotPasswordForm";
+import { ResetPasswordForm } from "./components/ResetPasswordForm";
 import { TaskForm } from "./components/TaskForm";
 import { TaskList } from "./components/TaskList";
 import {
@@ -78,6 +80,8 @@ const App = (): JSX.Element => {
         <div className="auth-grid">
           <RegisterForm onAuthenticated={setUser} />
           <LoginForm onAuthenticated={setUser} />
+          <ForgotPasswordForm />
+          <ResetPasswordForm />
         </div>
       </main>
     );

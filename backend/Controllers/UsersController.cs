@@ -32,28 +32,57 @@ public sealed class UsersController : ControllerBase
         var users = await _dbContext.Users.AsNoTracking().ToListAsync(cancellationToken);
 
         var results = users
-            .Select(u => new UserSearchResult
+            .Select(u => new
             {
-                Id = u.Id,
-                // Assumption: Username stores the display/full name in this lightweight model.
-                FullName = u.Username,
-                Username = u.Username
+                Result = new UserSearchResult
+                {
+                    Id = u.Id,
+                    FullName = u.FullName,
+                    Username = u.Username
+                },
+                Score = GetScore(u.FullName, u.Username, normalized)
             })
-            .Where(u => IsFuzzyMatch(u.FullName, normalized))
-            .OrderBy(u => u.FullName)
+            .Where(x => x.Score > 0)
+            .OrderByDescending(x => x.Score)
+            .ThenBy(x => x.Result.FullName)
             .Take(10)
+            .Select(x => x.Result)
             .ToList();
 
         return Ok(results);
     }
 
-    private static bool IsFuzzyMatch(string source, string query)
+    private static int GetScore(string fullName, string username, string query)
     {
-        if (source.Contains(query, StringComparison.OrdinalIgnoreCase))
+        var score = 0;
+
+        if (fullName.StartsWith(query, StringComparison.OrdinalIgnoreCase))
         {
-            return true;
+            score += 300;
+        }
+        else if (fullName.Contains(query, StringComparison.OrdinalIgnoreCase))
+        {
+            score += 220;
+        }
+        else if (IsSubsequenceMatch(fullName, query))
+        {
+            score += 120;
         }
 
+        if (username.StartsWith(query, StringComparison.OrdinalIgnoreCase))
+        {
+            score += 80;
+        }
+        else if (username.Contains(query, StringComparison.OrdinalIgnoreCase))
+        {
+            score += 40;
+        }
+
+        return score;
+    }
+
+    private static bool IsSubsequenceMatch(string source, string query)
+    {
         var sourceIndex = 0;
         var queryIndex = 0;
 

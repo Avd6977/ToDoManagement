@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using ToDoManagement.Api.Data;
 using ToDoManagement.Api.Dtos;
 using ToDoManagement.Api.Models;
+using ToDoManagement.Api.Services;
 
 namespace ToDoManagement.Api.Controllers;
 
@@ -14,10 +15,12 @@ namespace ToDoManagement.Api.Controllers;
 public sealed class TasksController : ControllerBase
 {
     private readonly AppDbContext _dbContext;
+    private readonly IDateTimeService _dateTimeService;
 
-    public TasksController(AppDbContext dbContext)
+    public TasksController(AppDbContext dbContext, IDateTimeService dateTimeService)
     {
         _dbContext = dbContext;
+        _dateTimeService = dateTimeService;
     }
 
     [HttpGet]
@@ -64,6 +67,8 @@ public sealed class TasksController : ControllerBase
             return BadRequest(new { message = "Assigned user does not exist." });
         }
 
+        var nowUtc = _dateTimeService.UtcNow;
+
         var task = new TaskItem
         {
             Id = Guid.NewGuid(),
@@ -72,7 +77,11 @@ public sealed class TasksController : ControllerBase
             DueDate = request.DueDate,
             IsCompleted = false,
             OwnerId = userId.Value,
-            AssignedToId = assignedToId
+            AssignedToId = assignedToId,
+            CreatedBy = userId.Value,
+            CreatedDateUtc = nowUtc,
+            UpdatedBy = userId.Value,
+            UpdatedDateUtc = nowUtc
         };
 
         _dbContext.Tasks.Add(task);
@@ -111,11 +120,16 @@ public sealed class TasksController : ControllerBase
             }
         }
 
+        var nowUtc = _dateTimeService.UtcNow;
+        AddHistory(task, nowUtc, "UPDATE");
+
         task.Title = request.Title.Trim();
         task.Description = request.Description.Trim();
         task.DueDate = request.DueDate;
         task.IsCompleted = request.IsCompleted;
         task.AssignedToId = request.AssignedToId;
+        task.UpdatedBy = userId.Value;
+        task.UpdatedDateUtc = nowUtc;
 
         await _dbContext.SaveChangesAsync(cancellationToken);
         return Ok(Map(task));
@@ -141,6 +155,7 @@ public sealed class TasksController : ControllerBase
             return StatusCode(StatusCodes.Status403Forbidden, new { message = "Only the owner can delete this task." });
         }
 
+        AddHistory(task, _dateTimeService.UtcNow, "DELETE");
         _dbContext.Tasks.Remove(task);
         await _dbContext.SaveChangesAsync(cancellationToken);
         return NoContent();
@@ -160,6 +175,36 @@ public sealed class TasksController : ControllerBase
         DueDate = task.DueDate,
         IsCompleted = task.IsCompleted,
         OwnerId = task.OwnerId,
-        AssignedToId = task.AssignedToId
+        AssignedToId = task.AssignedToId,
+        CreatedBy = task.CreatedBy,
+        CreatedDateUtc = task.CreatedDateUtc,
+        UpdatedBy = task.UpdatedBy,
+        UpdatedDateUtc = task.UpdatedDateUtc
     };
+
+    private void AddHistory(TaskItem task, DateTime validToUtc, string operation)
+    {
+        var validFromUtc = task.UpdatedDateUtc == default
+            ? task.CreatedDateUtc
+            : task.UpdatedDateUtc;
+
+        _dbContext.TaskHistory.Add(new TaskItemHistory
+        {
+            Id = Guid.NewGuid(),
+            TaskId = task.Id,
+            Title = task.Title,
+            Description = task.Description,
+            DueDate = task.DueDate,
+            IsCompleted = task.IsCompleted,
+            OwnerId = task.OwnerId,
+            AssignedToId = task.AssignedToId,
+            CreatedBy = task.CreatedBy,
+            CreatedDateUtc = task.CreatedDateUtc,
+            UpdatedBy = task.UpdatedBy,
+            UpdatedDateUtc = task.UpdatedDateUtc,
+            ValidFromUtc = validFromUtc,
+            ValidToUtc = validToUtc,
+            Operation = operation
+        });
+    }
 }

@@ -129,6 +129,15 @@ button.danger {
   text-align: left;
 }
 
+.token-preview {
+  margin: 0;
+  padding: 0.5rem;
+  border-radius: 6px;
+  background: #f0f4f8;
+  color: #102a43;
+  word-break: break-all;
+}
+
 @media (max-width: 600px) {
   main {
     padding: 1rem;

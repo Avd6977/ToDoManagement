@@ -26,4 +26,8 @@ public sealed class TaskResponse
     public bool IsCompleted { get; set; }
     public Guid OwnerId { get; set; }
     public Guid? AssignedToId { get; set; }
+    public Guid CreatedBy { get; set; }
+    public DateTime CreatedDateUtc { get; set; }
+    public Guid UpdatedBy { get; set; }
+    public DateTime UpdatedDateUtc { get; set; }
 }
