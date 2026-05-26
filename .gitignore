@@ -68,6 +68,9 @@ nunit-*.xml
 /backend/tasks.db-shm
 /backend/tasks.db-wal
 
+# Local manual QA artifacts
+/frontend/src/tests/results/
+
 # Rider IDE files
 .idea/
 backend/Folder.DotSettings.user
