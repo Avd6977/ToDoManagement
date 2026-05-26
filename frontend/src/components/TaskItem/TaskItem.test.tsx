@@ -39,6 +39,7 @@ describe("TaskItem", () => {
 
     // ASSERT
     expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(screen.getByText("Are you sure you want to delete this task?")).toBeInTheDocument();
     expect(onDelete).not.toHaveBeenCalled();
 
     // ACT

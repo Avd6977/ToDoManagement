@@ -44,4 +44,42 @@ describe('ConfirmationModal', () => {
         expect(onConfirm).toHaveBeenCalledTimes(1);
         expect(screen.getByRole('button', { name: 'Delete' })).toBeInTheDocument();
     });
+
+    it('calls onCancel when clicking outside the modal card', async () => {
+        const user = userEvent.setup();
+        const onCancel = vi.fn();
+
+        render(
+            <ConfirmationModal
+                isOpen
+                modalTitle="Delete task?"
+                content="Are you sure you want to delete this task?"
+                onConfirm={vi.fn()}
+                onCancel={onCancel}
+            />
+        );
+
+        await user.click(screen.getByRole('dialog'));
+
+        expect(onCancel).toHaveBeenCalledTimes(1);
+    });
+
+    it('calls onCancel when Escape key is pressed', async () => {
+        const user = userEvent.setup();
+        const onCancel = vi.fn();
+
+        render(
+            <ConfirmationModal
+                isOpen
+                modalTitle="Delete task?"
+                content="Are you sure you want to delete this task?"
+                onConfirm={vi.fn()}
+                onCancel={onCancel}
+            />
+        );
+
+        await user.keyboard('{Escape}');
+
+        expect(onCancel).toHaveBeenCalledTimes(1);
+    });
 });

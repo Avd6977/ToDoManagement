@@ -63,6 +63,32 @@ Frontend (from `frontend/`):
 npm run test
 ```
 
+## Seed Task Data For Manual Testing
+
+To quickly create large task sets for pagination/filter/sort testing, run the frontend seeding script.
+
+From `frontend/`:
+
+```bash
+npm run seed:tasks -- --email tester@example.com --password Strong1! --count 100 --startAt 1 --prefix "Task"
+```
+
+Options:
+- `--email` (required): user email used to login.
+- `--password` (required): password for that user.
+- `--count` (optional): number of tasks to create (default: `100`).
+- `--startAt` (optional): first task number (default: `1`).
+- `--prefix` (optional): description prefix (default: `Task`).
+- `--apiBaseUrl` (optional): API base URL (default: `http://localhost:5000/api`).
+- `--register true` (optional): register the user first if login fails.
+- `--fullName` (optional): full name used when `--register true` is specified (default: `Task Seeder`).
+
+Example with auto-register:
+
+```bash
+npm run seed:tasks -- --email qa.seed@example.com --password Strong1! --register true --fullName "QA Seeder" --count 50
+```
+
 ## Troubleshooting
 
 - Error copying `ToDoManagement.Api.exe` during build/test (`MSB3021` / `MSB3027`):

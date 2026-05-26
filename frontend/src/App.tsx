@@ -30,7 +30,7 @@ const toLocalDateInputValue = (date: Date): string => {
   return `${year}-${month}-${day}`;
 };
 
-const TASK_PAGE_SIZE = 25;
+const DEFAULT_TASK_PAGE_SIZE = 25;
 
 const App = (): JSX.Element => {
   const [user, setUser] = useState<User | null>(getStoredUser());
@@ -47,6 +47,7 @@ const App = (): JSX.Element => {
   const [taskQueryVersion, setTaskQueryVersion] = useState(0);
   const [sortOption, setSortOption] = useState<TaskSortOption>("recentlyAdded");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
+  const [taskPageSize, setTaskPageSize] = useState(DEFAULT_TASK_PAGE_SIZE);
   const [overdueOnly, setOverdueOnly] = useState(false);
   const [isSortMenuOpen, setIsSortMenuOpen] = useState(false);
   const sortMenuRef = useRef<HTMLDivElement | null>(null);
@@ -86,7 +87,7 @@ const App = (): JSX.Element => {
         search: searchTerm,
         status: requestedStatus,
         page: requestedPage,
-        pageSize: TASK_PAGE_SIZE,
+        pageSize: taskPageSize,
         sort: sortOption,
         sortDirection,
       });
@@ -127,6 +128,7 @@ const App = (): JSX.Element => {
     setCompletedTasksPage(1);
     setTaskQueryVersion((previous) => previous + 1);
     setCompletedTasks(null);
+    setIsSortMenuOpen(false);
   };
 
   const handleSortDirectionSelect = (nextDirection: SortDirection) => {
@@ -135,6 +137,7 @@ const App = (): JSX.Element => {
     setCompletedTasksPage(1);
     setTaskQueryVersion((previous) => previous + 1);
     setCompletedTasks(null);
+    setIsSortMenuOpen(false);
   };
 
   useEffect(() => {
@@ -175,6 +178,7 @@ const App = (): JSX.Element => {
       setSearchTerm("");
       setOverdueOnly(false);
       setIsSortMenuOpen(false);
+      setTaskPageSize(DEFAULT_TASK_PAGE_SIZE);
       navigate("/");
     };
 
@@ -234,6 +238,7 @@ const App = (): JSX.Element => {
     setCompletedTasksTotalPages(0);
     setIsCompletedExpanded(false);
     setSearchTerm("");
+    setTaskPageSize(DEFAULT_TASK_PAGE_SIZE);
   };
 
   const handleSaveProfile = async (payload: {
@@ -404,6 +409,7 @@ const App = (): JSX.Element => {
                           setCompletedTasksPage(1);
                           setTaskQueryVersion((previous) => previous + 1);
                           setCompletedTasks(null);
+                          setIsSortMenuOpen(false);
                         }}
                       >
                         Overdue Only
@@ -412,6 +418,26 @@ const App = (): JSX.Element => {
                   </div>
                 )}
               </div>
+
+              <label className="page-size-control">
+                Page Size
+                <select
+                  aria-label="Page Size"
+                  value={taskPageSize}
+                  onChange={(event) => {
+                    const nextPageSize = Number(event.target.value);
+                    setTaskPageSize(nextPageSize);
+                    setOpenTasksPage(1);
+                    setCompletedTasksPage(1);
+                    setTaskQueryVersion((previous) => previous + 1);
+                    setCompletedTasks(null);
+                  }}
+                >
+                  <option value={25}>25</option>
+                  <option value={50}>50</option>
+                  <option value={100}>100</option>
+                </select>
+              </label>
             </div>
 
             {loadingOpenTasks && <p>Loading open tasks...</p>}
@@ -444,6 +470,14 @@ const App = (): JSX.Element => {
                   disabled={openTasksPage >= openTasksTotalPages}
                 >
                   Next
+                </button>
+                <button
+                  type="button"
+                  className="secondary"
+                  onClick={() => setOpenTasksPage(openTasksTotalPages)}
+                  disabled={openTasksPage >= openTasksTotalPages}
+                >
+                  Last Page
                 </button>
               </div>
             )}
@@ -491,6 +525,14 @@ const App = (): JSX.Element => {
                         disabled={completedTasksPage >= completedTasksTotalPages}
                       >
                         Next
+                      </button>
+                      <button
+                        type="button"
+                        className="secondary"
+                        onClick={() => setCompletedTasksPage(completedTasksTotalPages)}
+                        disabled={completedTasksPage >= completedTasksTotalPages}
+                      >
+                        Last Page
                       </button>
                     </div>
                   )}

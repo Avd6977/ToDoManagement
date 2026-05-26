@@ -110,7 +110,7 @@ export const TaskItem = ({
           <ConfirmationModal
             isOpen={isDeleteModalOpen}
             modalTitle="Delete task?"
-            content="This action cannot be undone."
+            content="Are you sure you want to delete this task?"
             onConfirm={handleDelete}
             onCancel={() => setIsDeleteModalOpen(false)}
             isConfirming={isDeleting}

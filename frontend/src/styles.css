@@ -113,12 +113,14 @@ label {
 }
 
 input,
+select,
 textarea,
 button {
   font: inherit;
 }
 
 input,
+select,
 textarea {
   padding: 0.55rem;
   border-radius: 8px;
@@ -248,6 +250,10 @@ button.link-button:hover {
   justify-content: flex-start;
   align-items: stretch;
   gap: 0.75rem;
+}
+
+.page-size-control {
+  min-width: 8rem;
 }
 
 .sort-menu-wrapper {

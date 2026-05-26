@@ -31,10 +31,11 @@ describe('App auth screen', () => {
 
         await user.click(sortButton);
         await user.click(screen.getByRole('button', { name: 'Due Date' }));
+
+        await user.click(sortButton);
         await user.click(screen.getByRole('button', { name: 'Descending' }));
 
-        expect(screen.getByRole('button', { name: 'Due Date' })).toBeInTheDocument();
-        expect(screen.getByRole('button', { name: 'Descending' })).toBeInTheDocument();
+        expect(screen.queryByRole('menu', { name: 'Sort and Filter options' })).not.toBeInTheDocument();
     });
 
     it('closes sort menu when clicking outside of the popover', async () => {
@@ -120,6 +121,8 @@ describe('App auth screen', () => {
         );
 
         expect(await screen.findByRole('navigation', { name: 'In Progress pagination' })).toBeInTheDocument();
+        expect(screen.getAllByRole('button', { name: 'Last Page' }).length).toBeGreaterThan(0);
+        expect(screen.getByRole('combobox', { name: 'Page Size' })).toBeInTheDocument();
 
         await user.click(screen.getByRole('button', { name: /Completed/i }));
 
