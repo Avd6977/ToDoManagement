@@ -231,11 +231,13 @@ button.link-button:hover {
   margin-bottom: 0.2rem;
 }
 
-.login-links {
-  display: flex;
-  justify-content: space-between;
+.login-actions {
+  width: 100%;
   align-items: center;
-  gap: 0.5rem;
+}
+
+.register-button {
+  margin-left: auto;
 }
 
 .task-search {

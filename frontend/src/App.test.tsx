@@ -226,7 +226,7 @@ describe('App auth screen', () => {
         expect(screen.queryByRole('heading', { name: 'Register' })).not.toBeInTheDocument();
     });
 
-    it('navigates to register screen when register link is clicked', async () => {
+    it('navigates to register screen when register button is clicked', async () => {
         const user = userEvent.setup();
 
         render(

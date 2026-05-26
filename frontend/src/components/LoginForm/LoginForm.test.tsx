@@ -30,7 +30,7 @@ describe('LoginForm', () => {
         expect(submitButton).toBeEnabled();
     });
 
-    it('navigates with Register link', async () => {
+    it('navigates with Register button', async () => {
         const user = userEvent.setup();
         const onAuthenticated = vi.fn();
         const onRegisterClick = vi.fn();

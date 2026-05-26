@@ -77,17 +77,15 @@ export const LoginForm = ({
           />
         </label>
         {passwordError && <p className="error">{passwordError}</p>}
-        <div className="login-links">
-          <button type="button" className="link-button" onClick={onRegisterClick}>
-            Register
-          </button>
-        </div>
       </div>
 
       <div className="form-footer">
-        <div className="actions">
+        <div className="actions login-actions">
           <button type="submit" disabled={loading || !isFormValid}>
             {loading ? "Signing in..." : "Login"}
+          </button>
+          <button type="button" className="secondary register-button" onClick={onRegisterClick}>
+            Register
           </button>
         </div>
       </div>

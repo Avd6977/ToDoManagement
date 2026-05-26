@@ -41,7 +41,8 @@ Validate the full UI flow end to end using the in-app browser:
 | Step ID | Action | Expected Result | PASS/FAIL | Evidence/Notes |
 |---|---|---|---|---|
 | A01 | Open app landing page | Login screen renders without console/app error UI |  |  |
-| A02 | Click Register and open registration route | Registration screen loads correctly |  |  |
+| A01a | Verify Register control on Login screen | Register appears as a button (not plain text/link) aligned on the right side of the login action row |  |  |
+| A02 | Click Register button and open registration route | Registration screen loads correctly |  |  |
 | A03 | Register a new user with valid data | Registration succeeds and dashboard loads authenticated state |  |  |
 | A04 | Verify header/profile menu appears | Header shows profile controls and authenticated UI |  |  |
 | A05 | Create Task 001 | Task 001 appears in open task list |  |  |
