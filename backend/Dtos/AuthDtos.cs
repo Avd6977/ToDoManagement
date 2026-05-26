@@ -32,23 +32,6 @@ public sealed class RevokeTokenRequest
     public string RefreshToken { get; set; } = string.Empty;
 }
 
-public sealed class ForgotPasswordRequest
-{
-    public string Username { get; set; } = string.Empty;
-}
-
-public sealed class ForgotPasswordResponse
-{
-    public string Message { get; set; } = string.Empty;
-    public string? ResetToken { get; set; }
-}
-
-public sealed class ResetPasswordRequest
-{
-    public string ResetToken { get; set; } = string.Empty;
-    public string NewPassword { get; set; } = string.Empty;
-}
-
 public sealed class UpdateProfileRequest
 {
     public string FullName { get; set; } = string.Empty;

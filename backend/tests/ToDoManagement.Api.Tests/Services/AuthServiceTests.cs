@@ -45,7 +45,7 @@ public sealed class AuthServiceTests
     }
 
     [Fact]
-    public async Task RegisterAsync_Should_ReturnConflict_WhenUsernameAlreadyExists()
+    public async Task RegisterAsync_Should_ReturnConflict_WhenEmailAlreadyExists()
     {
         // ARRANGE
         await using var dbContext = await CreateDbContextAsync();
@@ -54,7 +54,7 @@ public sealed class AuthServiceTests
         {
             Id = Guid.NewGuid(),
             FullName = "Existing User",
-            Username = "existing-user",
+            Username = "existing@todo.local",
             PasswordHash = "stored-hash"
         });
         await dbContext.SaveChangesAsync();
@@ -65,7 +65,7 @@ public sealed class AuthServiceTests
         var result = await service.RegisterAsync(new RegisterRequest
         {
             FullName = "New User",
-            Username = "EXISTING-USER",
+            Username = "EXISTING@TODO.LOCAL",
             Password = "Strong1!"
         }, CancellationToken.None);
 
@@ -73,7 +73,7 @@ public sealed class AuthServiceTests
         using var scope = new AssertionScope();
         result.IsSuccess.Should().BeFalse();
         result.StatusCode.Should().Be(409);
-        result.Message.Should().Be("Username is already taken.");
+        result.Message.Should().Be("Email is already taken.");
     }
 
     [Fact]
@@ -86,7 +86,7 @@ public sealed class AuthServiceTests
         {
             Id = Guid.NewGuid(),
             FullName = "Test User",
-            Username = "test-user",
+            Username = "user@todo.local",
             PasswordHash = "stored-hash"
         };
 
@@ -102,7 +102,7 @@ public sealed class AuthServiceTests
         // ACT
         var result = await service.LoginAsync(new LoginRequest
         {
-            Username = "test-user",
+            Username = "user@todo.local",
             Password = "Wrong1!"
         }, CancellationToken.None);
 
@@ -110,7 +110,7 @@ public sealed class AuthServiceTests
         using var scope = new AssertionScope();
         result.IsSuccess.Should().BeFalse();
         result.StatusCode.Should().Be(401);
-        result.Message.Should().Be("Invalid username or password.");
+        result.Message.Should().Be("Invalid email or password.");
     }
 
     private AuthService CreateService(AppDbContext dbContext)

@@ -14,6 +14,9 @@ namespace ToDoManagement.Api.Tests.Controllers;
 
 public sealed class AuthControllerTests
 {
+    private const string AccessCookieName = "todo_access_token";
+    private const string RefreshCookieName = "todo_refresh_token";
+
     private readonly Mock<IAuthService> _authServiceMock;
 
     public AuthControllerTests()
@@ -28,7 +31,7 @@ public sealed class AuthControllerTests
         var request = new RegisterRequest
         {
             FullName = "Alice Johnson",
-            Username = "alice",
+            Username = "alice@todo.local",
             Password = "Strong1!"
         };
 
@@ -36,7 +39,7 @@ public sealed class AuthControllerTests
         {
             Id = Guid.NewGuid(),
             FullName = "Alice Johnson",
-            Username = "alice",
+            Username = "alice@todo.local",
             Token = "jwt-token",
             RefreshToken = "refresh-token"
         };
@@ -54,6 +57,8 @@ public sealed class AuthControllerTests
         using var scope = new AssertionScope();
         var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject;
         okResult.Value.Should().BeEquivalentTo(response);
+        controller.Response.Headers.SetCookie.ToString().Should().Contain(AccessCookieName);
+        controller.Response.Headers.SetCookie.ToString().Should().Contain(RefreshCookieName);
     }
 
     [Fact]
@@ -63,13 +68,13 @@ public sealed class AuthControllerTests
         var request = new RegisterRequest
         {
             FullName = "Alice Johnson",
-            Username = "alice",
+            Username = "alice@todo.local",
             Password = "Strong1!"
         };
 
         _authServiceMock
             .Setup(x => x.RegisterAsync(request, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(ServiceResult<AuthResponse>.Failure(409, "Username is already taken."));
+            .ReturnsAsync(ServiceResult<AuthResponse>.Failure(409, "Email is already taken."));
 
         var controller = CreateController();
 
@@ -89,7 +94,9 @@ public sealed class AuthControllerTests
         var request = new RevokeTokenRequest { RefreshToken = "refresh-token" };
 
         _authServiceMock
-            .Setup(x => x.RevokeAsync(request, It.IsAny<CancellationToken>()))
+            .Setup(x => x.RevokeAsync(
+                It.Is<RevokeTokenRequest>(r => r.RefreshToken == request.RefreshToken),
+                It.IsAny<CancellationToken>()))
             .ReturnsAsync(ServiceResult.Failure(200, "Refresh token revoked successfully."));
 
         var controller = CreateController();
@@ -108,7 +115,9 @@ public sealed class AuthControllerTests
         var request = new RevokeTokenRequest { RefreshToken = "refresh-token" };
 
         _authServiceMock
-            .Setup(x => x.RevokeAsync(request, It.IsAny<CancellationToken>()))
+            .Setup(x => x.RevokeAsync(
+                It.Is<RevokeTokenRequest>(r => r.RefreshToken == request.RefreshToken),
+                It.IsAny<CancellationToken>()))
             .ReturnsAsync(ServiceResult.Failure(404, "Refresh token was not found."));
 
         var controller = CreateController();
@@ -120,6 +129,64 @@ public sealed class AuthControllerTests
         using var scope = new AssertionScope();
         var objectResult = result.Should().BeOfType<ObjectResult>().Subject;
         objectResult.StatusCode.Should().Be(404);
+    }
+
+    [Fact]
+    public async Task Refresh_Should_UseCookieRefreshToken_WhenRequestBodyIsMissing()
+    {
+        // ARRANGE
+        const string refreshTokenValue = "refresh-token-cookie";
+        var response = new AuthResponse
+        {
+            Id = Guid.NewGuid(),
+            FullName = "Alice Johnson",
+            Username = "alice@todo.local",
+            Token = "jwt-token",
+            RefreshToken = "next-refresh-token"
+        };
+
+        _authServiceMock
+            .Setup(x => x.RefreshAsync(
+                It.Is<RefreshTokenRequest>(r => r.RefreshToken == refreshTokenValue),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(ServiceResult<AuthResponse>.Success(response));
+
+        var controller = CreateController();
+        controller.ControllerContext.HttpContext.Request.Headers.Append("Cookie", $"{RefreshCookieName}={refreshTokenValue}");
+
+        // ACT
+        var result = await controller.Refresh(null, CancellationToken.None);
+
+        // ASSERT
+        using var scope = new AssertionScope();
+        result.Result.Should().BeOfType<OkObjectResult>();
+        controller.Response.Headers.SetCookie.ToString().Should().Contain(AccessCookieName);
+        controller.Response.Headers.SetCookie.ToString().Should().Contain(RefreshCookieName);
+    }
+
+    [Fact]
+    public async Task Logout_Should_ClearCookies_AndReturnOk()
+    {
+        // ARRANGE
+        const string refreshTokenValue = "refresh-token-cookie";
+
+        _authServiceMock
+            .Setup(x => x.RevokeAsync(
+                It.Is<RevokeTokenRequest>(r => r.RefreshToken == refreshTokenValue),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(ServiceResult.Failure(200, "Refresh token revoked successfully."));
+
+        var controller = CreateController();
+        controller.ControllerContext.HttpContext.Request.Headers.Append("Cookie", $"{RefreshCookieName}={refreshTokenValue}");
+
+        // ACT
+        var result = await controller.Logout(CancellationToken.None);
+
+        // ASSERT
+        using var scope = new AssertionScope();
+        result.Should().BeOfType<OkObjectResult>();
+        controller.Response.Headers.SetCookie.ToString().Should().Contain($"{AccessCookieName}=;");
+        controller.Response.Headers.SetCookie.ToString().Should().Contain($"{RefreshCookieName}=;");
     }
 
     [Fact]
@@ -157,7 +224,7 @@ public sealed class AuthControllerTests
         {
             Id = userId,
             FullName = "Alice Johnson",
-            Username = "alice"
+            Username = "alice@todo.local"
         };
 
         _authServiceMock

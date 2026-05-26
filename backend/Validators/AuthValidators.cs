@@ -5,6 +5,8 @@ namespace ToDoManagement.Api.Validators;
 
 public sealed class RegisterRequestValidator : AbstractValidator<RegisterRequest>
 {
+    private const string EmailRegex = @"^[^\s@]+@[^\s@]+\.[^\s@]+$";
+
     public RegisterRequestValidator()
     {
         RuleFor(x => x.FullName)
@@ -12,8 +14,9 @@ public sealed class RegisterRequestValidator : AbstractValidator<RegisterRequest
             .MaximumLength(100).WithMessage("Full name must be 100 characters or fewer.");
 
         RuleFor(x => x.Username)
-            .NotEmpty().WithMessage("Username is required.")
-            .MaximumLength(50).WithMessage("Username must be 50 characters or fewer.");
+            .NotEmpty().WithMessage("Email is required.")
+            .MaximumLength(254).WithMessage("Email must be 254 characters or fewer.")
+            .Matches(EmailRegex).WithMessage("Email format is invalid.");
 
         RuleFor(x => x.Password)
             .NotEmpty().WithMessage("Password is required.")
@@ -26,10 +29,13 @@ public sealed class RegisterRequestValidator : AbstractValidator<RegisterRequest
 
 public sealed class LoginRequestValidator : AbstractValidator<LoginRequest>
 {
+    private const string EmailRegex = @"^[^\s@]+@[^\s@]+\.[^\s@]+$";
+
     public LoginRequestValidator()
     {
         RuleFor(x => x.Username)
-            .NotEmpty().WithMessage("Username is required.");
+            .NotEmpty().WithMessage("Email is required.")
+            .Matches(EmailRegex).WithMessage("Email format is invalid.");
 
         RuleFor(x => x.Password)
             .NotEmpty().WithMessage("Password is required.");
@@ -51,31 +57,6 @@ public sealed class RevokeTokenRequestValidator : AbstractValidator<RevokeTokenR
     {
         RuleFor(x => x.RefreshToken)
             .NotEmpty().WithMessage("Refresh token is required.");
-    }
-}
-
-public sealed class ForgotPasswordRequestValidator : AbstractValidator<ForgotPasswordRequest>
-{
-    public ForgotPasswordRequestValidator()
-    {
-        RuleFor(x => x.Username)
-            .NotEmpty().WithMessage("Username is required.");
-    }
-}
-
-public sealed class ResetPasswordRequestValidator : AbstractValidator<ResetPasswordRequest>
-{
-    public ResetPasswordRequestValidator()
-    {
-        RuleFor(x => x.ResetToken)
-            .NotEmpty().WithMessage("Reset token is required.");
-
-        RuleFor(x => x.NewPassword)
-            .NotEmpty().WithMessage("New password is required.")
-            .MinimumLength(8).WithMessage("Password must be at least 8 characters.")
-            .Matches("[A-Za-z]").WithMessage("Password must contain at least one letter.")
-            .Matches("[0-9]").WithMessage("Password must contain at least one number.")
-            .Matches("[^A-Za-z0-9]").WithMessage("Password must contain at least one special character.");
     }
 }
 

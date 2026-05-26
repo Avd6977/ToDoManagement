@@ -35,21 +35,21 @@ public sealed class AuthService : IAuthService
     public async Task<ServiceResult<AuthResponse>> RegisterAsync(RegisterRequest request, CancellationToken cancellationToken)
     {
         var fullName = request.FullName.Trim();
-        var username = request.Username.Trim();
+        var email = request.Username.Trim();
 
         var users = await _dbContext.Users.ToListAsync(cancellationToken);
-        var existingUser = users.FirstOrDefault(u => u.Username.Equals(username, StringComparison.OrdinalIgnoreCase));
+        var existingUser = users.FirstOrDefault(u => u.Username.Equals(email, StringComparison.OrdinalIgnoreCase));
 
         if (existingUser is not null)
         {
-            return ServiceResult<AuthResponse>.Failure(StatusCodes.Status409Conflict, "Username is already taken.");
+            return ServiceResult<AuthResponse>.Failure(StatusCodes.Status409Conflict, "Email is already taken.");
         }
 
         var user = new User
         {
             Id = Guid.NewGuid(),
             FullName = fullName,
-            Username = username,
+            Username = email,
             PasswordHash = _passwordHasher.HashPassword(request.Password)
         };
 
@@ -60,13 +60,13 @@ public sealed class AuthService : IAuthService
 
     public async Task<ServiceResult<AuthResponse>> LoginAsync(LoginRequest request, CancellationToken cancellationToken)
     {
-        var username = request.Username.Trim();
+        var email = request.Username.Trim();
         var users = await _dbContext.Users.ToListAsync(cancellationToken);
-        var user = users.FirstOrDefault(u => u.Username.Equals(username, StringComparison.OrdinalIgnoreCase));
+        var user = users.FirstOrDefault(u => u.Username.Equals(email, StringComparison.OrdinalIgnoreCase));
 
         if (user is null || !_passwordHasher.VerifyPassword(request.Password, user.PasswordHash))
         {
-            return ServiceResult<AuthResponse>.Failure(StatusCodes.Status401Unauthorized, "Invalid username or password.");
+            return ServiceResult<AuthResponse>.Failure(StatusCodes.Status401Unauthorized, "Invalid email or password.");
         }
 
         var authResponse = await IssueTokensAsync(user, cancellationToken);
@@ -141,89 +141,6 @@ public sealed class AuthService : IAuthService
         refreshToken.RevokedAtUtc = _dateTimeService.UtcNow;
         await _dbContext.SaveChangesAsync(cancellationToken);
         return ServiceResult.Failure(StatusCodes.Status200OK, "Refresh token revoked successfully.");
-    }
-
-    public async Task<ServiceResult<ForgotPasswordResponse>> ForgotPasswordAsync(ForgotPasswordRequest request, CancellationToken cancellationToken)
-    {
-        var username = request.Username.Trim();
-        var users = await _dbContext.Users.ToListAsync(cancellationToken);
-        var user = users.FirstOrDefault(u => u.Username.Equals(username, StringComparison.OrdinalIgnoreCase));
-
-        var response = new ForgotPasswordResponse
-        {
-            Message = "If the account exists, a reset token has been generated."
-        };
-
-        if (user is null)
-        {
-            return ServiceResult<ForgotPasswordResponse>.Success(response);
-        }
-
-        var nowUtc = _dateTimeService.UtcNow;
-        var activeTokens = await _dbContext.PasswordResetTokens
-            .Where(t => t.UserId == user.Id && t.UsedAtUtc == null && t.ExpiresAtUtc > nowUtc)
-            .ToListAsync(cancellationToken);
-
-        foreach (var token in activeTokens)
-        {
-            token.UsedAtUtc = nowUtc;
-        }
-
-        var resetToken = _refreshTokenService.GenerateToken();
-        var resetTokenHash = _refreshTokenService.HashToken(resetToken);
-
-        _dbContext.PasswordResetTokens.Add(new PasswordResetToken
-        {
-            Id = Guid.NewGuid(),
-            UserId = user.Id,
-            TokenHash = resetTokenHash,
-            CreatedAtUtc = nowUtc,
-            ExpiresAtUtc = nowUtc.AddMinutes(30)
-        });
-
-        await _dbContext.SaveChangesAsync(cancellationToken);
-        response.ResetToken = resetToken;
-
-        return ServiceResult<ForgotPasswordResponse>.Success(response);
-    }
-
-    public async Task<ServiceResult> ResetPasswordAsync(ResetPasswordRequest request, CancellationToken cancellationToken)
-    {
-        var tokenHash = _refreshTokenService.HashToken(request.ResetToken);
-        var resetToken = await _dbContext.PasswordResetTokens
-            .FirstOrDefaultAsync(t => t.TokenHash == tokenHash, cancellationToken);
-
-        if (resetToken is null)
-        {
-            return ServiceResult.Failure(StatusCodes.Status400BadRequest, "Reset token is invalid.");
-        }
-
-        var nowUtc = _dateTimeService.UtcNow;
-        if (!resetToken.IsActive(nowUtc))
-        {
-            return ServiceResult.Failure(StatusCodes.Status400BadRequest, "Reset token is expired or already used.");
-        }
-
-        var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Id == resetToken.UserId, cancellationToken);
-        if (user is null)
-        {
-            return ServiceResult.Failure(StatusCodes.Status400BadRequest, "User for reset token was not found.");
-        }
-
-        user.PasswordHash = _passwordHasher.HashPassword(request.NewPassword);
-        resetToken.UsedAtUtc = nowUtc;
-
-        var activeRefreshTokens = await _dbContext.RefreshTokens
-            .Where(t => t.UserId == user.Id && t.RevokedAtUtc == null && t.ExpiresAtUtc > nowUtc)
-            .ToListAsync(cancellationToken);
-
-        foreach (var token in activeRefreshTokens)
-        {
-            token.RevokedAtUtc = nowUtc;
-        }
-
-        await _dbContext.SaveChangesAsync(cancellationToken);
-        return ServiceResult.Failure(StatusCodes.Status200OK, "Password has been reset successfully.");
     }
 
     public async Task<ServiceResult<ProfileResponse>> UpdateProfileAsync(Guid userId, UpdateProfileRequest request, CancellationToken cancellationToken)

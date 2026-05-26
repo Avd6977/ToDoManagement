@@ -7,17 +7,78 @@ Full-stack task management application with:
 ## Required Versions
 
 - .NET SDK: **8.0** (or newer 8.0.x patch)
+- Node.js: **18+** (LTS recommended)
+- npm: **9+**
 - EF Core packages: **8.0.20**
 - EF CLI: **dotnet-ef 8.0.20**
+
+## Quick Start (Run The Project)
+
+These steps start both API and UI locally.
+
+1. Open a terminal at the repo root:
+
+```bash
+cd ToDoManagement
+```
+
+2. Start the backend API in terminal #1:
+
+```bash
+cd backend
+dotnet restore
+dotnet build
+dotnet run
+```
+
+3. Start the frontend in terminal #2:
+
+```bash
+cd frontend
+npm install
+npm start
+```
+
+4. Open the app in your browser:
+- Frontend: `http://localhost:5173`
+- Backend API (if needed directly): `http://localhost:5000`
+- Swagger (Development only): `http://localhost:5000/swagger`
+
+Notes:
+- The backend applies pending EF Core migrations automatically on startup.
+- SQLite database file is created/updated at `backend/tasks.db`.
+- Keep both terminal windows running while using the app.
+
+## Run Tests
+
+Backend (from `backend/`):
+
+```bash
+dotnet test .\tests\ToDoManagement.Api.Tests\ToDoManagement.Api.Tests.csproj --property:WarningLevel=0 --logger "console;verbosity=minimal"
+```
+
+Frontend (from `frontend/`):
+
+```bash
+npm run test
+```
+
+## Troubleshooting
+
+- Error copying `ToDoManagement.Api.exe` during build/test (`MSB3021` / `MSB3027`):
+  - Cause: an existing running API process is locking the binary.
+  - Fix: stop the running API process, then rerun build/test.
+- Frontend can not reach API:
+  - Verify backend is running first with `dotnet run`.
+  - Verify frontend is running with `npm run dev`.
+  - Confirm browser is opened to the Vite URL shown in terminal.
 
 ## Features
 
 - User registration and login with JWT access token + refresh token issuance.
+- Authentication token state is managed with secure HttpOnly cookies (access + refresh).
 - Refresh token rotation (`POST /api/auth/refresh`) and explicit revocation (`POST /api/auth/revoke`).
-- Forgot/reset password flow with one-time reset tokens:
-  - `POST /api/auth/forgot-password` invalidates any existing active reset tokens for the user, creates a new token, stores only a hash, and returns a generic success response.
-  - `POST /api/auth/reset-password` validates one-time token usage/expiration, resets password, marks token used, and revokes all active refresh tokens for that user.
-- Password policy enforcement on register and reset:
+- Password policy enforcement on register:
   - Minimum 8 characters
   - At least 1 letter
   - At least 1 number
@@ -27,12 +88,18 @@ Full-stack task management application with:
 - Task filtering via `GET /api/tasks` query parameters:
   - `search` (matches title/description)
   - `status` (`open`, `completed`, or `all`)
+- Task sorting via `GET /api/tasks` query parameter:
+  - `sort` (`alphabetical` or `recentlyAdded`; default: `recentlyAdded`)
+  - `sortDirection` (`asc` or `desc`; default: `asc`)
+- Task pagination via `GET /api/tasks` query parameters:
+  - `page` (default: `1`)
+  - `pageSize` (`25`, `50`, or `100`; default: `25`)
 - Dashboard split view for open tasks + expandable completed tasks section with lazy loading.
 - Overdue due-date highlighting in the dashboard.
 - Profile management for authenticated users:
   - Update full name
   - Optional password change when current password is provided
-  - Username is immutable
+  - Email is immutable
 - Task audit metadata:
   - `CreatedDateUtc`
   - `UpdatedDateUtc`
@@ -40,53 +107,6 @@ Full-stack task management application with:
 - Strongly typed JWT settings via `JwtTokenDto` (`IOptions<JwtTokenDto>`).
 - Migration-based schema updates on startup (uses `Database.Migrate()`).
 - Validation using FluentValidation for auth and task payloads.
-
-## Project Structure
-
-```text
-ToDoManagement/
-├── backend/
-│   ├── Controllers/
-│   ├── Data/
-│   ├── Dtos/
-│   ├── Migrations/
-│   ├── Models/
-│   ├── Services/
-│   ├── Validators/
-│   └── tests/
-├── frontend/
-│   ├── src/
-│   │   ├── components/
-│   │   ├── services/
-│   │   ├── test/
-│   │   ├── types/
-│   │   └── ...
-│   └── ...
-└── ...
-```
-
-## Backend Setup
-
-1. Open terminal in `backend/`.
-2. Restore and build:
-
-```bash
-dotnet restore
-dotnet build
-```
-
-3. Run API:
-
-```bash
-dotnet run
-```
-
-Startup applies pending migrations automatically.
-
-4. API base URL (default):
-- `http://localhost:5000` (or URL shown by `dotnet run` output)
-
-Swagger is enabled in Development.
 
 ## EF Migrations
 
@@ -157,23 +177,6 @@ dotnet ef migrations remove
 - The migration files are located under `backend/Migrations/`.
 - For existing local databases created before this column existed, run `dotnet ef database update` to add the missing column.
 
-## Frontend Setup
-
-1. Open terminal in `frontend/`.
-2. Install dependencies:
-
-```bash
-npm install
-```
-
-3. Start dev server:
-
-```bash
-npm run dev
-```
-
-4. Open Vite URL shown in terminal (default `http://localhost:5173`).
-
 ## Database Initialization
 
 - Database provider: SQLite (`backend/tasks.db`)
@@ -183,85 +186,43 @@ npm run dev
 ## Authentication Endpoints
 
 - `POST /api/auth/register`
-  - Body: `{ "fullName": "string", "username": "string", "password": "string" }`
-  - Returns: `{ id, fullName, username, token, refreshToken }`
+  - Body: `{ "fullName": "string", "username": "email", "password": "string" }`
+  - Returns: `{ id, fullName, username, token, refreshToken }` (`username` contains the user's email)
+  - Also sets secure HttpOnly cookies for access and refresh tokens.
 - `POST /api/auth/login`
-  - Body: `{ "username": "string", "password": "string" }`
-  - Returns: `{ id, fullName, username, token, refreshToken }`
+  - Body: `{ "username": "email", "password": "string" }`
+  - Returns: `{ id, fullName, username, token, refreshToken }` (`username` contains the user's email)
+  - Also sets secure HttpOnly cookies for access and refresh tokens.
 - `POST /api/auth/refresh`
-  - Body: `{ "refreshToken": "string" }`
+  - Body: optional `{ "refreshToken": "string" }` (falls back to refresh-token cookie when omitted)
   - Returns: `{ id, fullName, username, token, refreshToken }`
   - Behavior: revokes the previous refresh token and issues a new one.
+  - Updates secure HttpOnly cookies with the newly issued token pair.
 - `POST /api/auth/revoke`
-  - Body: `{ "refreshToken": "string" }`
+  - Body: optional `{ "refreshToken": "string" }` (falls back to refresh-token cookie when omitted)
   - Revokes the specified refresh token.
-- `POST /api/auth/forgot-password`
-  - Body: `{ "username": "string" }`
-  - Returns generic success message to reduce account enumeration risk.
-  - Demo behavior: also returns a `resetToken` so flow can be tested without email integration.
-- `POST /api/auth/reset-password`
-  - Body: `{ "resetToken": "string", "newPassword": "string" }`
-  - Validates one-time reset token, updates password hash, marks token used, and revokes all active refresh tokens for that user.
-
-## Forgot Password Flow (Detailed)
-
-### Sequence Diagram
-
-```mermaid
-sequenceDiagram
-  participant U as User
-  participant UI as Frontend UI
-  participant API as Auth API
-  participant DB as Database
-
-  U->>UI: Submit username (forgot password)
-  UI->>API: POST /api/auth/forgot-password
-  API->>DB: Find user by username
-  alt User exists
-    API->>DB: Mark active reset tokens as used
-    API->>DB: Create new hashed reset token (30 min)
-    API-->>UI: 200 + generic message + resetToken (demo)
-  else User not found
-    API-->>UI: 200 + generic message
-  end
-  UI-->>U: Show generic success message
-
-  U->>UI: Submit resetToken + newPassword
-  UI->>API: POST /api/auth/reset-password
-  API->>DB: Validate token (exists, active, not used)
-  alt Token valid
-    API->>DB: Update password hash
-    API->>DB: Mark reset token used
-    API->>DB: Revoke all active refresh tokens
-    API-->>UI: 200 Password reset successful
-  else Token invalid/expired/used
-    API-->>UI: 400 Reset token invalid
-  end
-  UI-->>U: Display result
-```
-
-1. User submits username to `POST /api/auth/forgot-password`.
-2. API always returns a generic success message, whether user exists or not.
-3. If user exists:
-   - Any active reset tokens for the user are marked used.
-   - New reset token is generated.
-   - Only token hash is stored in `PasswordResetTokens` with 30-minute expiry.
-   - Plain reset token is returned in response for local/demo usage.
-4. User submits reset token + new password to `POST /api/auth/reset-password`.
-5. API verifies token exists, is not expired, and has not been used.
-6. Password hash is replaced with new PBKDF2 hash.
-7. Reset token is marked used.
-8. All active refresh tokens for that user are revoked, forcing re-authentication on other sessions.
+- `POST /api/auth/logout`
+  - Revokes current refresh token when available.
+  - Clears secure HttpOnly auth cookies.
+- `GET /api/auth/session`
+  - Requires authentication.
+  - Returns current session profile from token claims: `{ id, fullName, username }`.
 
 ## Task Endpoints
 
-All endpoints require Bearer token.
+All endpoints require authenticated session (Bearer token or cookie-authenticated JWT).
 
 - `GET /api/tasks`
   - Returns tasks for the current authenticated user only.
   - Optional query params:
     - `search`: filters by title/description
     - `status`: `open`, `completed`, or `all`
+    - `sort`: `alphabetical` or `recentlyAdded` (default `recentlyAdded`)
+    - `sortDirection`: `asc` or `desc` (default `asc`)
+    - `page`: 1-based page number (default `1`)
+    - `pageSize`: `25`, `50`, or `100` (default `25`)
+  - Response shape:
+    - `PagedResponse<TaskResponse>`: `{ items, page, pageSize, totalCount, totalPages }`
 - `POST /api/tasks`
   - Body: `{ title, description, dueDate? }`
   - The task is always tied to the current authenticated user.
@@ -271,11 +232,11 @@ All endpoints require Bearer token.
 - `DELETE /api/tasks/{id}`
   - Current authenticated user only.
 
-Task responses include: `{ id, title, description, dueDate, isCompleted, createdDateUtc, updatedDateUtc }`.
+Task item payloads include: `{ id, title, description, dueDate, isCompleted, createdDateUtc, updatedDateUtc }`.
 
 ## Profile Endpoint
 
-All endpoints require Bearer token.
+All endpoints require authenticated session (Bearer token or cookie-authenticated JWT).
 
 - `PUT /api/auth/profile`
   - Body: `{ "fullName": "string", "currentPassword"?: "string", "newPassword"?: "string" }`
@@ -283,20 +244,18 @@ All endpoints require Bearer token.
     - Full name is updated when valid.
     - Password changes are optional.
     - If `newPassword` is provided, `currentPassword` is required and must match.
-    - Username is not editable.
+    - Email is not editable.
 
 ## Frontend Notes
 
 - Auth is route-based:
   - `/` login screen (default)
   - `/register` registration screen
-  - `/forgot-password` forgot-password request screen
-  - `/reset-password` reset-password screen (available only after a successful forgot-password request in the current app session)
   - `/tasks` authenticated dashboard
   - `/create-task` authenticated create-task page
   - `/profile` authenticated profile page
-- Login view includes inline links under Password: `Register` (left) and `Forgot Password?` (right).
-- JWT is stored client-side and sent as `Authorization: Bearer <token>`.
+- Login view includes inline `Register` link.
+- Auth token state is server-managed with secure HttpOnly cookies.
 - Header includes a profile dropdown with full name + logout actions.
 - Forms use touched-field validation:
   - Field-level validation messages are shown only after the field has been touched (blurred).
@@ -304,57 +263,22 @@ All endpoints require Bearer token.
 - Task due date UX:
   - Create and edit date pickers use a min date of today to prevent selecting past dates.
   - Edit flow allows updates when an existing past due date is unchanged, but blocks changes to a new past date.
+- Task list includes sorting controls for `Recently Added` and `Alphabetical`.
+- Selecting `Alphabetical` again toggles direction between `A-Z` and `Z-A`.
 - Global auth guard:
   - API `401 Unauthorized` responses clear local auth state and return the user to the login route.
-
-## Testing
-
-### Backend Tests (xUnit + FluentAssertions)
-
-Run from `backend/`:
-
-```bash
-dotnet test .\tests\ToDoManagement.Api.Tests\ToDoManagement.Api.Tests.csproj --property:WarningLevel=0 --logger "console;verbosity=minimal"
-```
-
-Coverage includes:
-- Auth payload and password policy validation.
-- Password hashing/verification behavior.
-- Password reset token activity rules.
-
-### Frontend Tests (Vitest + Testing Library + MSW)
-
-Run from `frontend/`:
-
-```bash
-npm run test
-```
-
-Coverage includes:
-- Login form behavior.
-- Registration form behavior.
-- Forgot/reset password form behavior.
-- Profile form behavior.
-- Task form validation behavior.
-- Header dropdown behavior.
-- Route rendering behavior for authenticated pages.
-- API service calls with MSW handlers (including profile update and task filtering behavior).
 
 ## Assumptions
 
 - SQLite is used for local persistence (`tasks.db`).
 - SQLite does not provide SQL Server temporal tables, so temporal behavior is application-managed via `TaskItemHistory`.
-- Forgot-password email delivery is intentionally out of scope for this repo; token return is demo-only.
 
 ## Limitations
 
-- Refresh token and access token are stored in browser `localStorage` for demo simplicity.
-- No pagination for task lists.
 - Single environment-focused configuration.
 
 ## Future Improvements
 
-- Replace demo reset-token return with real email/SMS provider integration.
+- Add a production-ready Forgot Password flow backed by a production-grade email provider (for example SendGrid/SES) and proper secret management.
 - Add rate limiting and abuse protections around auth endpoints.
-- Add integration tests for auth controller and token lifecycle.
 - Add role-based authorization and stricter revoke authorization semantics.

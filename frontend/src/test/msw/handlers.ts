@@ -5,7 +5,7 @@ export const handlers = [
         HttpResponse.json({
             id: '11111111-1111-1111-1111-111111111111',
             fullName: 'Alice Johnson',
-            username: 'alice',
+            username: 'alice@todo.local',
             token: 'test-jwt-token',
             refreshToken: 'test-refresh-token'
         })
@@ -14,6 +14,13 @@ export const handlers = [
         const url = new URL(request.url);
         const status = (url.searchParams.get('status') ?? 'all').toLowerCase();
         const search = (url.searchParams.get('search') ?? '').toLowerCase();
+        const sort = (url.searchParams.get('sort') ?? 'recentlyadded')
+            .replace('_', '')
+            .replace('-', '')
+            .toLowerCase();
+        const sortDirection = (
+            url.searchParams.get('sortDirection') ?? 'asc'
+        ).toLowerCase();
 
         const allTasks = [
             {
@@ -47,19 +54,25 @@ export const handlers = [
               )
             : filteredByStatus;
 
-        return HttpResponse.json(filtered);
+        const sorted =
+            sort === 'alphabetical'
+                ? [...filtered].sort((left, right) =>
+                      sortDirection === 'desc'
+                          ? right.title.localeCompare(left.title)
+                          : left.title.localeCompare(right.title)
+                  )
+                : sortDirection === 'desc'
+                  ? [...filtered].reverse()
+                  : filtered;
+
+        return HttpResponse.json({
+            items: sorted,
+            page: 1,
+            pageSize: 25,
+            totalCount: sorted.length,
+            totalPages: sorted.length ? 1 : 0
+        });
     }),
-    http.post('http://localhost:5000/api/auth/forgot-password', async () =>
-        HttpResponse.json({
-            message: 'If the account exists, a reset token has been generated.',
-            resetToken: 'sample-reset-token'
-        })
-    ),
-    http.post('http://localhost:5000/api/auth/reset-password', async () =>
-        HttpResponse.json({
-            message: 'Password has been reset successfully.'
-        })
-    ),
     http.put('http://localhost:5000/api/auth/profile', async ({ request }) => {
         const body = (await request.json()) as {
             fullName: string;
@@ -77,7 +90,7 @@ export const handlers = [
         return HttpResponse.json({
             id: '11111111-1111-1111-1111-111111111111',
             fullName: body.fullName,
-            username: 'alice'
+            username: 'alice@todo.local'
         });
     })
 ];

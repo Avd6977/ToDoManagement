@@ -2,42 +2,48 @@ import { FormEvent, useState } from "react";
 import type { User } from "../types/User";
 import { login } from "../services/api";
 
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 interface LoginFormProps {
   onAuthenticated: (user: User) => void;
   onRegisterClick: () => void;
-  onForgotPasswordClick: () => void;
 }
 
 export const LoginForm = ({
   onAuthenticated,
   onRegisterClick,
-  onForgotPasswordClick,
 }: LoginFormProps): JSX.Element => {
-  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitError, setSubmitError] = useState("");
   const [loading, setLoading] = useState(false);
   const [touched, setTouched] = useState({
-    username: false,
+    email: false,
     password: false,
   });
 
-  const usernameError = touched.username && !username.trim() ? "Username is required." : "";
+  const emailError = touched.email
+    ? !email.trim()
+      ? "Email is required."
+      : !EMAIL_REGEX.test(email.trim())
+        ? "Email format is invalid."
+        : ""
+    : "";
   const passwordError = touched.password && !password.trim() ? "Password is required." : "";
-  const isFormValid = !!username.trim() && !!password.trim();
+  const isFormValid = !!email.trim() && EMAIL_REGEX.test(email.trim()) && !!password.trim();
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
     setSubmitError("");
 
     if (!isFormValid) {
-      setTouched({ username: true, password: true });
+      setTouched({ email: true, password: true });
       return;
     }
 
     try {
       setLoading(true);
-      const user = await login(username.trim(), password);
+      const user = await login(email.trim(), password);
       onAuthenticated(user);
     } catch (err: any) {
       setSubmitError(err?.response?.data?.message ?? "Login failed. Please try again.");
@@ -47,45 +53,50 @@ export const LoginForm = ({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="card">
-      <h2>Login</h2>
-      <label>
-        Username
-        <input
-          value={username}
-          onChange={(e) => {
-            setUsername(e.target.value);
-            setSubmitError("");
-          }}
-          onBlur={() => setTouched((previous) => ({ ...previous, username: true }))}
-        />
-      </label>
-      {usernameError && <p className="error">{usernameError}</p>}
-      <label>
-        Password
-        <input
-          type="password"
-          value={password}
-          onChange={(e) => {
-            setPassword(e.target.value);
-            setSubmitError("");
-          }}
-          onBlur={() => setTouched((previous) => ({ ...previous, password: true }))}
-        />
-      </label>
-      {passwordError && <p className="error">{passwordError}</p>}
-      <div className="login-links">
-        <button type="button" className="link-button" onClick={onRegisterClick}>
-          Register
-        </button>
-        <button type="button" className="link-button" onClick={onForgotPasswordClick}>
-          Forgot Password?
-        </button>
+    <form onSubmit={handleSubmit} className="card form-card">
+      <div className="form-content">
+        <h2>Login</h2>
+        <label>
+          Email
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => {
+              setEmail(e.target.value);
+              setSubmitError("");
+            }}
+            onBlur={() => setTouched((previous) => ({ ...previous, email: true }))}
+          />
+        </label>
+        {emailError && <p className="error">{emailError}</p>}
+        <label>
+          Password
+          <input
+            type="password"
+            value={password}
+            onChange={(e) => {
+              setPassword(e.target.value);
+              setSubmitError("");
+            }}
+            onBlur={() => setTouched((previous) => ({ ...previous, password: true }))}
+          />
+        </label>
+        {passwordError && <p className="error">{passwordError}</p>}
+        <div className="login-links">
+          <button type="button" className="link-button" onClick={onRegisterClick}>
+            Register
+          </button>
+        </div>
+        {submitError && <p className="error">{submitError}</p>}
       </div>
-      {submitError && <p className="error">{submitError}</p>}
-      <button type="submit" disabled={loading || !isFormValid}>
-        {loading ? "Signing in..." : "Login"}
-      </button>
+
+      <div className="form-footer">
+        <div className="actions">
+          <button type="submit" disabled={loading || !isFormValid}>
+            {loading ? "Signing in..." : "Login"}
+          </button>
+        </div>
+      </div>
     </form>
   );
 };

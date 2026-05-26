@@ -30,13 +30,81 @@ public sealed class TaskServiceTests
         var service = new TaskService(dbContext, _dateTimeServiceMock.Object);
 
         // ACT
-        var result = await service.GetTasksAsync(Guid.NewGuid(), null, "invalid", CancellationToken.None);
+        var result = await service.GetTasksAsync(Guid.NewGuid(), null, "invalid", null, null, null, null, CancellationToken.None);
 
         // ASSERT
         using var scope = new AssertionScope();
         result.IsSuccess.Should().BeFalse();
         result.StatusCode.Should().Be(400);
         result.Message.Should().Be("Invalid status filter. Use open, completed, or all.");
+    }
+
+    [Fact]
+    public async Task GetTasksAsync_Should_ReturnBadRequest_WhenSortIsInvalid()
+    {
+        // ARRANGE
+        await using var dbContext = await CreateDbContextAsync();
+        var service = new TaskService(dbContext, _dateTimeServiceMock.Object);
+
+        // ACT
+        var result = await service.GetTasksAsync(Guid.NewGuid(), null, "all", "priority", null, null, null, CancellationToken.None);
+
+        // ASSERT
+        using var scope = new AssertionScope();
+        result.IsSuccess.Should().BeFalse();
+        result.StatusCode.Should().Be(400);
+        result.Message.Should().Be("Invalid sort option. Use alphabetical or recentlyAdded.");
+    }
+
+    [Fact]
+    public async Task GetTasksAsync_Should_ReturnBadRequest_WhenSortDirectionIsInvalid()
+    {
+        // ARRANGE
+        await using var dbContext = await CreateDbContextAsync();
+        var service = new TaskService(dbContext, _dateTimeServiceMock.Object);
+
+        // ACT
+        var result = await service.GetTasksAsync(Guid.NewGuid(), null, "all", "alphabetical", "sideways", null, null, CancellationToken.None);
+
+        // ASSERT
+        using var scope = new AssertionScope();
+        result.IsSuccess.Should().BeFalse();
+        result.StatusCode.Should().Be(400);
+        result.Message.Should().Be("Invalid sortDirection. Use asc or desc.");
+    }
+
+    [Fact]
+    public async Task GetTasksAsync_Should_ReturnBadRequest_WhenPageIsLessThanOne()
+    {
+        // ARRANGE
+        await using var dbContext = await CreateDbContextAsync();
+        var service = new TaskService(dbContext, _dateTimeServiceMock.Object);
+
+        // ACT
+        var result = await service.GetTasksAsync(Guid.NewGuid(), null, "all", null, null, 0, null, CancellationToken.None);
+
+        // ASSERT
+        using var scope = new AssertionScope();
+        result.IsSuccess.Should().BeFalse();
+        result.StatusCode.Should().Be(400);
+        result.Message.Should().Be("Page must be greater than or equal to 1.");
+    }
+
+    [Fact]
+    public async Task GetTasksAsync_Should_ReturnBadRequest_WhenPageSizeIsNotAllowed()
+    {
+        // ARRANGE
+        await using var dbContext = await CreateDbContextAsync();
+        var service = new TaskService(dbContext, _dateTimeServiceMock.Object);
+
+        // ACT
+        var result = await service.GetTasksAsync(Guid.NewGuid(), null, "all", null, null, 1, 10, CancellationToken.None);
+
+        // ASSERT
+        using var scope = new AssertionScope();
+        result.IsSuccess.Should().BeFalse();
+        result.StatusCode.Should().Be(400);
+        result.Message.Should().Be("Invalid page size. Allowed values are 25, 50, or 100.");
     }
 
     [Fact]
@@ -81,6 +149,277 @@ public sealed class TaskServiceTests
         var history = await dbContext.TaskHistory.SingleAsync(h => h.TaskId == taskId);
         history.Operation.Should().Be("DELETE");
         history.ValidToUtc.Should().Be(FixedNowUtc);
+    }
+
+    [Fact]
+    public async Task GetTasksAsync_Should_NotReturnTasksOwnedByDifferentUser()
+    {
+        // ARRANGE
+        await using var dbContext = await CreateDbContextAsync();
+        var userId = Guid.NewGuid();
+        var otherUserId = Guid.NewGuid();
+        var ownTaskId = Guid.NewGuid();
+        var otherUserTaskId = Guid.NewGuid();
+
+        dbContext.Users.AddRange(
+            new User
+            {
+                Id = userId,
+                FullName = "Owner User",
+                Username = "owner-user",
+                PasswordHash = "hash"
+            },
+            new User
+            {
+                Id = otherUserId,
+                FullName = "Other User",
+                Username = "other-user",
+                PasswordHash = "hash"
+            });
+
+        dbContext.Tasks.AddRange(
+            new TaskItem
+            {
+                Id = ownTaskId,
+                Title = "Owner task",
+                Description = "Visible to owner",
+                OwnerId = userId,
+                IsCompleted = false,
+                CreatedDateUtc = FixedNowUtc.AddDays(-2),
+                UpdatedDateUtc = FixedNowUtc.AddDays(-1)
+            },
+            new TaskItem
+            {
+                Id = otherUserTaskId,
+                Title = "Other task",
+                Description = "Must not be visible",
+                OwnerId = otherUserId,
+                IsCompleted = false,
+                CreatedDateUtc = FixedNowUtc.AddDays(-2),
+                UpdatedDateUtc = FixedNowUtc.AddDays(-1)
+            });
+
+        await dbContext.SaveChangesAsync();
+        var service = new TaskService(dbContext, _dateTimeServiceMock.Object);
+
+        // ACT
+        var result = await service.GetTasksAsync(userId, null, "all", null, null, 1, 25, CancellationToken.None);
+
+        // ASSERT
+        using var scope = new AssertionScope();
+        result.IsSuccess.Should().BeTrue();
+        result.StatusCode.Should().Be(200);
+        result.Value.Should().NotBeNull();
+        result.Value!.Items.Should().HaveCount(1);
+        result.Value.Items.Single().Id.Should().Be(ownTaskId);
+        result.Value.Items.Should().NotContain(t => t.Id == otherUserTaskId);
+        result.Value.Items.Should().NotContain(t => t.OwnerId == otherUserId);
+        result.Value.Page.Should().Be(1);
+        result.Value.PageSize.Should().Be(25);
+        result.Value.TotalCount.Should().Be(1);
+        result.Value.TotalPages.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task GetTasksAsync_Should_ReturnPaginationMetadata_AndRequestedPageItems()
+    {
+        // ARRANGE
+        await using var dbContext = await CreateDbContextAsync();
+        var userId = Guid.NewGuid();
+
+        dbContext.Users.Add(new User
+        {
+            Id = userId,
+            FullName = "Paged User",
+            Username = "paged-user",
+            PasswordHash = "hash"
+        });
+
+        var now = FixedNowUtc;
+        for (var index = 1; index <= 30; index++)
+        {
+            dbContext.Tasks.Add(new TaskItem
+            {
+                Id = Guid.NewGuid(),
+                Title = $"Task {index}",
+                Description = "Paged task",
+                OwnerId = userId,
+                IsCompleted = false,
+                CreatedDateUtc = now.AddMinutes(-index),
+                UpdatedDateUtc = now.AddMinutes(-index),
+                DueDate = now.Date.AddDays(index)
+            });
+        }
+
+        await dbContext.SaveChangesAsync();
+        var service = new TaskService(dbContext, _dateTimeServiceMock.Object);
+
+        // ACT
+        var result = await service.GetTasksAsync(userId, null, "open", null, null, 2, 25, CancellationToken.None);
+
+        // ASSERT
+        using var scope = new AssertionScope();
+        result.IsSuccess.Should().BeTrue();
+        result.StatusCode.Should().Be(200);
+        result.Value.Should().NotBeNull();
+        result.Value!.Page.Should().Be(2);
+        result.Value.PageSize.Should().Be(25);
+        result.Value.TotalCount.Should().Be(30);
+        result.Value.TotalPages.Should().Be(2);
+        result.Value.Items.Should().HaveCount(5);
+    }
+
+    [Fact]
+    public async Task GetTasksAsync_Should_SortAlphabetically_WhenRequested()
+    {
+        // ARRANGE
+        await using var dbContext = await CreateDbContextAsync();
+        var userId = Guid.NewGuid();
+
+        dbContext.Users.Add(new User
+        {
+            Id = userId,
+            FullName = "Sort User",
+            Username = "sort-user",
+            PasswordHash = "hash"
+        });
+
+        dbContext.Tasks.AddRange(
+            new TaskItem
+            {
+                Id = Guid.NewGuid(),
+                Title = "Zulu",
+                Description = "Task z",
+                OwnerId = userId,
+                IsCompleted = false,
+                CreatedDateUtc = FixedNowUtc.AddMinutes(-1),
+                UpdatedDateUtc = FixedNowUtc.AddMinutes(-1)
+            },
+            new TaskItem
+            {
+                Id = Guid.NewGuid(),
+                Title = "Alpha",
+                Description = "Task a",
+                OwnerId = userId,
+                IsCompleted = false,
+                CreatedDateUtc = FixedNowUtc.AddMinutes(-2),
+                UpdatedDateUtc = FixedNowUtc.AddMinutes(-2)
+            });
+
+        await dbContext.SaveChangesAsync();
+        var service = new TaskService(dbContext, _dateTimeServiceMock.Object);
+
+        // ACT
+        var result = await service.GetTasksAsync(userId, null, "open", "alphabetical", "asc", 1, 25, CancellationToken.None);
+
+        // ASSERT
+        using var scope = new AssertionScope();
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().NotBeNull();
+        result.Value!.Items.Select(x => x.Title).Should().ContainInOrder("Alpha", "Zulu");
+    }
+
+    [Fact]
+    public async Task GetTasksAsync_Should_SortByRecentlyAdded_WhenRequested()
+    {
+        // ARRANGE
+        await using var dbContext = await CreateDbContextAsync();
+        var userId = Guid.NewGuid();
+
+        dbContext.Users.Add(new User
+        {
+            Id = userId,
+            FullName = "Sort User",
+            Username = "sort-user-2",
+            PasswordHash = "hash"
+        });
+
+        var olderTaskId = Guid.NewGuid();
+        var newerTaskId = Guid.NewGuid();
+
+        dbContext.Tasks.AddRange(
+            new TaskItem
+            {
+                Id = olderTaskId,
+                Title = "Older",
+                Description = "Older task",
+                OwnerId = userId,
+                IsCompleted = false,
+                CreatedDateUtc = FixedNowUtc.AddDays(-2),
+                UpdatedDateUtc = FixedNowUtc.AddDays(-2)
+            },
+            new TaskItem
+            {
+                Id = newerTaskId,
+                Title = "Newer",
+                Description = "Newer task",
+                OwnerId = userId,
+                IsCompleted = false,
+                CreatedDateUtc = FixedNowUtc,
+                UpdatedDateUtc = FixedNowUtc
+            });
+
+        await dbContext.SaveChangesAsync();
+        var service = new TaskService(dbContext, _dateTimeServiceMock.Object);
+
+        // ACT
+        var result = await service.GetTasksAsync(userId, null, "open", "recentlyAdded", "asc", 1, 25, CancellationToken.None);
+
+        // ASSERT
+        using var scope = new AssertionScope();
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().NotBeNull();
+        result.Value!.Items.Select(x => x.Id).Should().ContainInOrder(newerTaskId, olderTaskId);
+    }
+
+    [Fact]
+    public async Task GetTasksAsync_Should_SortAlphabeticallyDescending_WhenRequested()
+    {
+        // ARRANGE
+        await using var dbContext = await CreateDbContextAsync();
+        var userId = Guid.NewGuid();
+
+        dbContext.Users.Add(new User
+        {
+            Id = userId,
+            FullName = "Sort Desc User",
+            Username = "sort-desc-user",
+            PasswordHash = "hash"
+        });
+
+        dbContext.Tasks.AddRange(
+            new TaskItem
+            {
+                Id = Guid.NewGuid(),
+                Title = "Alpha",
+                Description = "Task a",
+                OwnerId = userId,
+                IsCompleted = false,
+                CreatedDateUtc = FixedNowUtc,
+                UpdatedDateUtc = FixedNowUtc
+            },
+            new TaskItem
+            {
+                Id = Guid.NewGuid(),
+                Title = "Zulu",
+                Description = "Task z",
+                OwnerId = userId,
+                IsCompleted = false,
+                CreatedDateUtc = FixedNowUtc.AddMinutes(-1),
+                UpdatedDateUtc = FixedNowUtc.AddMinutes(-1)
+            });
+
+        await dbContext.SaveChangesAsync();
+        var service = new TaskService(dbContext, _dateTimeServiceMock.Object);
+
+        // ACT
+        var result = await service.GetTasksAsync(userId, null, "open", "alphabetical", "desc", 1, 25, CancellationToken.None);
+
+        // ASSERT
+        using var scope = new AssertionScope();
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().NotBeNull();
+        result.Value!.Items.Select(x => x.Title).Should().ContainInOrder("Zulu", "Alpha");
     }
 
     private static async Task<AppDbContext> CreateDbContextAsync()

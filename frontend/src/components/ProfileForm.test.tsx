@@ -8,7 +8,7 @@ describe('ProfileForm', () => {
     const user: User = {
         id: '11111111-1111-1111-1111-111111111111',
         fullName: 'Alice Johnson',
-        username: 'alice'
+        email: 'alice@todo.local'
     };
 
     it('requires current password when new password is provided', async () => {
@@ -30,16 +30,16 @@ describe('ProfileForm', () => {
         expect(onSave).not.toHaveBeenCalled();
     });
 
-    it('disables username and submits profile payload', async () => {
+    it('disables email and submits profile payload', async () => {
         const onSave = vi.fn().mockResolvedValue(undefined);
         const onCancel = vi.fn();
         const userEventSetup = userEvent.setup();
 
         render(<ProfileForm user={user} onSave={onSave} onCancel={onCancel} />);
 
-        const usernameInput = screen.getByLabelText('Username (cannot be changed)');
-        expect(usernameInput).toBeDisabled();
-        expect(usernameInput).toHaveAttribute('title', 'Username cannot be changed.');
+        const emailInput = screen.getByLabelText('Email (cannot be changed)');
+        expect(emailInput).toBeDisabled();
+        expect(emailInput).toHaveAttribute('title', 'Email cannot be changed.');
 
         await userEventSetup.clear(screen.getByLabelText(/^Full Name/));
         await userEventSetup.type(screen.getByLabelText(/^Full Name/), 'Alice Updated');

@@ -2,8 +2,6 @@ import { useEffect, useState } from "react";
 import { Navigate, Route, Routes, useNavigate } from "react-router-dom";
 import { LoginForm } from "./components/LoginForm";
 import { RegisterForm } from "./components/RegisterForm";
-import { ForgotPasswordForm } from "./components/ForgotPasswordForm";
-import { ResetPasswordForm } from "./components/ResetPasswordForm";
 import { TaskForm } from "./components/TaskForm";
 import { TaskList } from "./components/TaskList";
 import { AppHeader } from "./components/AppHeader";
@@ -14,6 +12,8 @@ import {
   getStoredUser,
   getTasks,
   logout,
+  type SortDirection,
+  type TaskSortOption,
   type TaskStatusFilter,
   updateProfile,
   updateStoredUserFullName,
@@ -38,7 +38,8 @@ const App = (): JSX.Element => {
   const [loadingCompletedTasks, setLoadingCompletedTasks] = useState(false);
   const [isCompletedExpanded, setIsCompletedExpanded] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [canResetPassword, setCanResetPassword] = useState(false);
+  const [sortOption, setSortOption] = useState<TaskSortOption>("recentlyAdded");
+  const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
   const navigate = useNavigate();
 
   const loadTasks = async (status: TaskStatusFilter, options?: { force?: boolean }) => {
@@ -62,7 +63,7 @@ const App = (): JSX.Element => {
       }
 
       setError("");
-      const fetchedTasks = await getTasks({ search: searchTerm, status });
+      const fetchedTasks = await getTasks({ search: searchTerm, status, sort: sortOption, sortDirection });
       if (status == "completed")
       {
         setCompletedTasks(fetchedTasks);
@@ -88,7 +89,17 @@ const App = (): JSX.Element => {
   useEffect(() => {
     void loadTasks("open", { force: true });
     setCompletedTasks(null);
-  }, [user, searchTerm]);
+  }, [user, searchTerm, sortOption, sortDirection]);
+
+  const handleSortSelect = (nextSort: TaskSortOption) => {
+    if (nextSort === "alphabetical" && sortOption === "alphabetical") {
+      setSortDirection((previous) => previous === "asc" ? "desc" : "asc");
+      return;
+    }
+
+    setSortOption(nextSort);
+    setSortDirection("asc");
+  };
 
   useEffect(() => {
     if (isCompletedExpanded && completedTasks == null)
@@ -182,7 +193,6 @@ const App = (): JSX.Element => {
               <LoginForm
                 onAuthenticated={setUser}
                 onRegisterClick={() => navigate("/register")}
-                onForgotPasswordClick={() => navigate("/forgot-password")}
               />
             </main>
           )}
@@ -196,36 +206,10 @@ const App = (): JSX.Element => {
               <RegisterForm
                 onAuthenticated={setUser}
                 onBackToLoginClick={() => navigate("/")}
+                onCancel={() => navigate("/")}
               />
             </main>
           )}
-        />
-        <Route
-          path="/forgot-password"
-          element={(
-            <main className="auth-layout">
-              <h1>ToDo Management</h1>
-              <p className="subtitle">Request a password reset token.</p>
-              <ForgotPasswordForm
-                onRequestSucceeded={() => {
-                  setCanResetPassword(true);
-                  navigate("/reset-password");
-                }}
-              />
-            </main>
-          )}
-        />
-        <Route
-          path="/reset-password"
-          element={canResetPassword
-            ? (
-              <main className="auth-layout">
-                <h1>ToDo Management</h1>
-                <p className="subtitle">Set your new password.</p>
-                <ResetPasswordForm />
-              </main>
-            )
-            : <Navigate to="/forgot-password" replace />}
         />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
@@ -267,6 +251,34 @@ const App = (): JSX.Element => {
                 placeholder="Search title or description"
               />
             </label>
+
+            <div className="task-search">
+              <span>Sort Tasks</span>
+              <div className="actions">
+                <button
+                  type="button"
+                  className={sortOption === "recentlyAdded" ? "" : "secondary"}
+                  onClick={() => {
+                    handleSortSelect("recentlyAdded");
+                    setCompletedTasks(null);
+                  }}
+                >
+                  Recently Added
+                </button>
+                <button
+                  type="button"
+                  className={sortOption === "alphabetical" ? "" : "secondary"}
+                  onClick={() => {
+                    handleSortSelect("alphabetical");
+                    setCompletedTasks(null);
+                  }}
+                >
+                  {sortOption === "alphabetical" && sortDirection === "desc"
+                    ? "Alphabetical (Z-A)"
+                    : "Alphabetical (A-Z)"}
+                </button>
+              </div>
+            </div>
 
             {loadingOpenTasks && <p>Loading open tasks...</p>}
             {error && <p className="error">{error}</p>}

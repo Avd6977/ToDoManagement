@@ -19,9 +19,13 @@ public sealed class TasksController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<ActionResult<IReadOnlyCollection<TaskResponse>>> GetTasks(
+    public async Task<ActionResult<PagedResponse<TaskResponse>>> GetTasks(
         [FromQuery] string? search,
         [FromQuery] string? status,
+        [FromQuery] string? sort,
+        [FromQuery] string? sortDirection,
+        [FromQuery] int? page,
+        [FromQuery] int? pageSize,
         CancellationToken cancellationToken)
     {
         var userId = GetCurrentUserId();
@@ -30,7 +34,7 @@ public sealed class TasksController : ControllerBase
             return Unauthorized(new { message = "User context is missing from token." });
         }
 
-        var result = await _taskService.GetTasksAsync(userId.Value, search, status, cancellationToken);
+        var result = await _taskService.GetTasksAsync(userId.Value, search, status, sort, sortDirection, page, pageSize, cancellationToken);
         if (!result.IsSuccess)
         {
             return ToErrorResult(result.StatusCode, result.Message);

@@ -81,6 +81,23 @@ main {
   gap: 0.75rem;
 }
 
+.form-card {
+  display: flex;
+  flex-direction: column;
+  min-height: 26rem;
+}
+
+.form-content {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.form-footer {
+  margin-top: auto;
+  border-top: 1px solid #d9e2ec;
+  padding-top: 0.75rem;
+}
+
 label {
   display: grid;
   gap: 0.35rem;
@@ -287,6 +304,32 @@ button.link-button:hover {
   background: #f0f4f8;
   color: #102a43;
   word-break: break-all;
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(16, 42, 67, 0.45);
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  z-index: 20;
+}
+
+.modal-card {
+  width: min(420px, 100%);
+  background: #ffffff;
+  border: 1px solid #d9e2ec;
+  border-radius: 10px;
+  padding: 1rem;
+  display: grid;
+  gap: 0.75rem;
+  box-shadow: 0 10px 28px rgba(16, 42, 67, 0.2);
+}
+
+.modal-card h5,
+.modal-card p {
+  margin: 0;
 }
 
 @media (max-width: 600px) {

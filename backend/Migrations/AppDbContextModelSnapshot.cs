@@ -17,38 +17,6 @@ namespace ToDoManagement.Api.Migrations
 #pragma warning disable 612, 618
 			modelBuilder.HasAnnotation("ProductVersion", "8.0.20");
 
-			modelBuilder.Entity("ToDoManagement.Api.Models.PasswordResetToken", b =>
-				{
-					b.Property<Guid>("Id")
-						.ValueGeneratedOnAdd()
-						.HasColumnType("TEXT");
-
-					b.Property<DateTime>("CreatedAtUtc")
-						.HasColumnType("TEXT");
-
-					b.Property<DateTime>("ExpiresAtUtc")
-						.HasColumnType("TEXT");
-
-					b.Property<string>("TokenHash")
-						.IsRequired()
-						.HasColumnType("TEXT");
-
-					b.Property<DateTime?>("UsedAtUtc")
-						.HasColumnType("TEXT");
-
-					b.Property<Guid>("UserId")
-						.HasColumnType("TEXT");
-
-					b.HasKey("Id");
-
-					b.HasIndex("TokenHash")
-						.IsUnique();
-
-					b.HasIndex("UserId");
-
-					b.ToTable("PasswordResetTokens");
-				});
-
 			modelBuilder.Entity("ToDoManagement.Api.Models.RefreshToken", b =>
 				{
 					b.Property<Guid>("Id")
@@ -196,15 +164,6 @@ namespace ToDoManagement.Api.Migrations
 						.IsUnique();
 
 					b.ToTable("Users");
-				});
-
-			modelBuilder.Entity("ToDoManagement.Api.Models.PasswordResetToken", b =>
-				{
-					b.HasOne("ToDoManagement.Api.Models.User", null)
-						.WithMany()
-						.HasForeignKey("UserId")
-						.OnDelete(DeleteBehavior.Cascade)
-						.IsRequired();
 				});
 
 			modelBuilder.Entity("ToDoManagement.Api.Models.RefreshToken", b =>

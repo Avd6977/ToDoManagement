@@ -38,22 +38,35 @@ interface AuthResponse {
     refreshToken: string;
 }
 
-interface ForgotPasswordResponse {
-    message: string;
-    resetToken?: string;
-}
-
-interface ProfileResponse {
+interface ApiProfileResponse {
     id: string;
     fullName: string;
     username: string;
 }
 
+interface ProfileResponse {
+    id: string;
+    fullName: string;
+    email: string;
+}
+
 export type TaskStatusFilter = 'open' | 'completed' | 'all';
+export type TaskSortOption = 'recentlyAdded' | 'alphabetical';
+export type SortDirection = 'asc' | 'desc';
+
+interface PagedResponse<T> {
+    items: T[];
+    page: number;
+    pageSize: number;
+    totalCount: number;
+    totalPages: number;
+}
 
 interface GetTasksParams {
     search?: string;
     status?: TaskStatusFilter;
+    sort?: TaskSortOption;
+    sortDirection?: SortDirection;
 }
 
 interface UpdateProfilePayload {
@@ -70,13 +83,13 @@ const persistAuth = (auth: AuthResponse): User => {
         JSON.stringify({
             id: auth.id,
             fullName: auth.fullName,
-            username: auth.username
+            email: auth.username
         })
     );
     return {
         id: auth.id,
         fullName: auth.fullName,
-        username: auth.username,
+        email: auth.username,
         token: auth.token,
         refreshToken: auth.refreshToken
     };
@@ -84,23 +97,20 @@ const persistAuth = (auth: AuthResponse): User => {
 
 export const register = async (
     fullName: string,
-    username: string,
+    email: string,
     password: string
 ): Promise<User> => {
     const response = await apiClient.post<AuthResponse>('/auth/register', {
         fullName,
-        username,
+        username: email,
         password
     });
     return persistAuth(response.data);
 };
 
-export const login = async (
-    username: string,
-    password: string
-): Promise<User> => {
+export const login = async (email: string, password: string): Promise<User> => {
     const response = await apiClient.post<AuthResponse>('/auth/login', {
-        username,
+        username: email,
         password
     });
     return persistAuth(response.data);
@@ -117,46 +127,30 @@ export const revoke = async (refreshToken: string): Promise<void> => {
     await apiClient.post('/auth/revoke', { refreshToken });
 };
 
-export const forgotPassword = async (
-    username: string
-): Promise<ForgotPasswordResponse> => {
-    const response = await apiClient.post<ForgotPasswordResponse>(
-        '/auth/forgot-password',
-        {
-            username
-        }
-    );
-    return response.data;
-};
-
-export const resetPassword = async (
-    resetToken: string,
-    newPassword: string
-): Promise<void> => {
-    await apiClient.post('/auth/reset-password', {
-        resetToken,
-        newPassword
-    });
-};
-
 export const updateProfile = async (
     payload: UpdateProfilePayload
 ): Promise<ProfileResponse> => {
-    const response = await apiClient.put<ProfileResponse>(
+    const response = await apiClient.put<ApiProfileResponse>(
         '/auth/profile',
         payload
     );
-    return response.data;
+    return {
+        id: response.data.id,
+        fullName: response.data.fullName,
+        email: response.data.username
+    };
 };
 
 export const getTasks = async (params?: GetTasksParams): Promise<Task[]> => {
-    const response = await apiClient.get<Task[]>('/tasks', {
+    const response = await apiClient.get<PagedResponse<Task>>('/tasks', {
         params: {
             search: params?.search?.trim() || undefined,
-            status: params?.status ?? 'all'
+            status: params?.status ?? 'all',
+            sort: params?.sort ?? 'recentlyAdded',
+            sortDirection: params?.sortDirection ?? 'asc'
         }
     });
-    return response.data;
+    return response.data.items;
 };
 
 export const createTask = async (task: Partial<Task>): Promise<Task> => {

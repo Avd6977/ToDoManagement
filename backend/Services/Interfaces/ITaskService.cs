@@ -4,7 +4,7 @@ namespace ToDoManagement.Api.Services.Interfaces;
 
 public interface ITaskService
 {
-    Task<ServiceResult<IReadOnlyCollection<TaskResponse>>> GetTasksAsync(Guid userId, string? search, string? status, CancellationToken cancellationToken);
+    Task<ServiceResult<PagedResponse<TaskResponse>>> GetTasksAsync(Guid userId, string? search, string? status, string? sort, string? sortDirection, int? page, int? pageSize, CancellationToken cancellationToken);
 
     Task<ServiceResult<TaskResponse>> CreateTaskAsync(Guid userId, CreateTaskRequest request, CancellationToken cancellationToken);
 

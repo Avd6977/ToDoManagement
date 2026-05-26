@@ -26,6 +26,8 @@ export const TaskItem = ({
   onUpdate,
 }: TaskItemProps): JSX.Element => {
   const [isEditing, setIsEditing] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState("");
 
   const handleToggle = async () => {
@@ -40,9 +42,13 @@ export const TaskItem = ({
   const handleDelete = async () => {
     setError("");
     try {
+      setIsDeleting(true);
       await onDelete(task.id);
+      setIsDeleteModalOpen(false);
     } catch (err: any) {
       setError(err?.response?.data?.message ?? "Unable to delete task.");
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -80,10 +86,33 @@ export const TaskItem = ({
             <button type="button" onClick={handleToggle}>
               {task.isCompleted ? "Mark Incomplete" : "Mark Complete"}
             </button>
-            <button type="button" onClick={handleDelete} className="danger">
+            <button type="button" onClick={() => setIsDeleteModalOpen(true)} className="danger">
               Delete
             </button>
           </div>
+
+          {isDeleteModalOpen && (
+            <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby={`delete-task-title-${task.id}`}>
+              <div className="modal-card">
+                <h5 id={`delete-task-title-${task.id}`}>Delete task?</h5>
+                <p>This action cannot be undone.</p>
+                <div className="actions">
+                  <button type="button" className="danger" onClick={handleDelete} disabled={isDeleting}>
+                    {isDeleting ? "Deleting..." : "Delete"}
+                  </button>
+                  <button
+                    type="button"
+                    className="secondary"
+                    onClick={() => setIsDeleteModalOpen(false)}
+                    disabled={isDeleting}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {error && <p className="error">{error}</p>}
         </>
       ) : (

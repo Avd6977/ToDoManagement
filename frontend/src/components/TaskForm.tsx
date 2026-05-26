@@ -120,69 +120,74 @@ export const TaskForm = ({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="card task-form">
-      <h3>{submitLabel}</h3>
-      <label>
-        Title*
-        <input
-          value={title}
-          maxLength={TASK_TITLE_MAX_LENGTH}
-          onChange={(e) => {
-            setTitle(e.target.value);
-            setSubmitError("");
-          }}
-          onBlur={() => setTouched((previous) => ({ ...previous, title: true }))}
-          required
-        />
-        <span className={`field-counter ${titleTooLong ? "error" : "hint"}`}>
-          {title.length}/{TASK_TITLE_MAX_LENGTH}
-        </span>
-      </label>
-      {titleError && <p className="error">{titleError}</p>}
-      <label>
-        Description*
-        <textarea
-          value={description}
-          maxLength={TASK_DESCRIPTION_MAX_LENGTH}
-          onChange={(e) => {
-            setDescription(e.target.value);
-            setSubmitError("");
-          }}
-          onBlur={() => setTouched((previous) => ({ ...previous, description: true }))}
-          required
-        />
-        <span className={`field-counter ${descriptionTooLong ? "error" : "hint"}`}>
-          {description.length}/{TASK_DESCRIPTION_MAX_LENGTH}
-        </span>
-      </label>
-      {descriptionError && <p className="error">{descriptionError}</p>}
-      <label>
-        Due Date
-        <input
-          type="date"
-          value={dueDate}
-          min={minDueDate}
-          onChange={(e) => {
-            setDueDate(e.target.value);
-            setSubmitError("");
-          }}
-          onBlur={() => setTouched((previous) => ({ ...previous, dueDate: true }))}
-        />
-      </label>
-      {dueDateError && <p className="error">{dueDateError}</p>}
-      {submitError && <p className="error">{submitError}</p>}
-      <div className="actions">
-        <button
-          type="submit"
-          disabled={loading || !isFormValid}
-        >
-          {loading ? "Saving..." : submitLabel}
-        </button>
-        {onCancel && (
-          <button type="button" onClick={onCancel} className="secondary">
-            Cancel
+    <form onSubmit={handleSubmit} className="card task-form form-card">
+      <div className="form-content">
+        <h3>{submitLabel}</h3>
+        <label>
+          Title*
+          <input
+            value={title}
+            maxLength={TASK_TITLE_MAX_LENGTH}
+            onChange={(e) => {
+              setTitle(e.target.value);
+              setSubmitError("");
+            }}
+            onBlur={() => setTouched((previous) => ({ ...previous, title: true }))}
+            required
+          />
+          <span className={`field-counter ${titleTooLong ? "error" : "hint"}`}>
+            {title.length}/{TASK_TITLE_MAX_LENGTH}
+          </span>
+        </label>
+        {titleError && <p className="error">{titleError}</p>}
+        <label>
+          Description*
+          <textarea
+            value={description}
+            maxLength={TASK_DESCRIPTION_MAX_LENGTH}
+            onChange={(e) => {
+              setDescription(e.target.value);
+              setSubmitError("");
+            }}
+            onBlur={() => setTouched((previous) => ({ ...previous, description: true }))}
+            required
+          />
+          <span className={`field-counter ${descriptionTooLong ? "error" : "hint"}`}>
+            {description.length}/{TASK_DESCRIPTION_MAX_LENGTH}
+          </span>
+        </label>
+        {descriptionError && <p className="error">{descriptionError}</p>}
+        <label>
+          Due Date
+          <input
+            type="date"
+            value={dueDate}
+            min={minDueDate}
+            onChange={(e) => {
+              setDueDate(e.target.value);
+              setSubmitError("");
+            }}
+            onBlur={() => setTouched((previous) => ({ ...previous, dueDate: true }))}
+          />
+        </label>
+        {dueDateError && <p className="error">{dueDateError}</p>}
+        {submitError && <p className="error">{submitError}</p>}
+      </div>
+
+      <div className="form-footer">
+        <div className="actions">
+          <button
+            type="submit"
+            disabled={loading || !isFormValid}
+          >
+            {loading ? "Saving..." : submitLabel}
           </button>
-        )}
+          {onCancel && (
+            <button type="button" onClick={onCancel} className="secondary">
+              Cancel
+            </button>
+          )}
+        </div>
       </div>
     </form>
   );

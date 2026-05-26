@@ -12,10 +12,6 @@ public interface IAuthService
 
     Task<ServiceResult> RevokeAsync(RevokeTokenRequest request, CancellationToken cancellationToken);
 
-    Task<ServiceResult<ForgotPasswordResponse>> ForgotPasswordAsync(ForgotPasswordRequest request, CancellationToken cancellationToken);
-
-    Task<ServiceResult> ResetPasswordAsync(ResetPasswordRequest request, CancellationToken cancellationToken);
-
     Task<ServiceResult<ProfileResponse>> UpdateProfileAsync(Guid userId, UpdateProfileRequest request, CancellationToken cancellationToken);
 }
 
