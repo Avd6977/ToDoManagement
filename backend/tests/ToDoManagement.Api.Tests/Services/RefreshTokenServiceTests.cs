@@ -12,6 +12,8 @@ public sealed class RefreshTokenServiceTests
     [Fact]
     public void GenerateToken_Should_ReturnBase64EncodedRandomValue()
     {
+        // ARRANGE
+
         // ACT
         var token = _service.GenerateToken();
 
