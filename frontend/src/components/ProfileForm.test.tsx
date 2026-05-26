@@ -17,8 +17,8 @@ describe('ProfileForm', () => {
 
         render(<ProfileForm user={user} onSave={onSave} />);
 
-        await userEventSetup.clear(screen.getByLabelText('Full Name'));
-        await userEventSetup.type(screen.getByLabelText('Full Name'), 'Alice Johnson');
+        await userEventSetup.clear(screen.getByLabelText(/^Full Name/));
+        await userEventSetup.type(screen.getByLabelText(/^Full Name/), 'Alice Johnson');
         await userEventSetup.type(screen.getByLabelText('New Password'), 'NewStrong1!');
         await userEventSetup.tab();
 
@@ -30,17 +30,30 @@ describe('ProfileForm', () => {
         expect(onSave).not.toHaveBeenCalled();
     });
 
-    it('disables username and submits profile payload', async () => {
+    it('shows counters and max lengths for full name and username fields', () => {
         const onSave = vi.fn().mockResolvedValue(undefined);
-        const userEventSetup = userEvent.setup();
 
         render(<ProfileForm user={user} onSave={onSave} />);
 
-        const usernameInput = screen.getByLabelText('Username');
-        expect(usernameInput).toBeDisabled();
+        expect(screen.getByText('13/100')).toBeInTheDocument();
+        expect(screen.getByText('5/50')).toBeInTheDocument();
+        expect(screen.getByLabelText(/^Full Name/)).toHaveAttribute('maxLength', '100');
+        expect(screen.getByLabelText('Username (cannot be changed)')).toHaveAttribute('maxLength', '50');
+    });
 
-        await userEventSetup.clear(screen.getByLabelText('Full Name'));
-        await userEventSetup.type(screen.getByLabelText('Full Name'), 'Alice Updated');
+    it('disables username and submits profile payload', async () => {
+        const onSave = vi.fn().mockResolvedValue(undefined);
+        const onCancel = vi.fn();
+        const userEventSetup = userEvent.setup();
+
+        render(<ProfileForm user={user} onSave={onSave} onCancel={onCancel} />);
+
+        const usernameInput = screen.getByLabelText('Username (cannot be changed)');
+        expect(usernameInput).toBeDisabled();
+        expect(usernameInput).toHaveAttribute('title', 'Username cannot be changed.');
+
+        await userEventSetup.clear(screen.getByLabelText(/^Full Name/));
+        await userEventSetup.type(screen.getByLabelText(/^Full Name/), 'Alice Updated');
         await userEventSetup.type(screen.getByLabelText('Current Password'), 'Strong1!');
         await userEventSetup.type(screen.getByLabelText('New Password'), 'NewStrong1!');
         await userEventSetup.click(screen.getByRole('button', { name: 'Save Profile' }));
@@ -52,5 +65,17 @@ describe('ProfileForm', () => {
             newPassword: 'NewStrong1!'
         });
         expect(await screen.findByText('Profile updated successfully.')).toBeInTheDocument();
+    });
+
+    it('calls onCancel when Cancel button is clicked', async () => {
+        const onSave = vi.fn().mockResolvedValue(undefined);
+        const onCancel = vi.fn();
+        const userEventSetup = userEvent.setup();
+
+        render(<ProfileForm user={user} onSave={onSave} onCancel={onCancel} />);
+
+        await userEventSetup.click(screen.getByRole('button', { name: 'Cancel' }));
+
+        expect(onCancel).toHaveBeenCalledTimes(1);
     });
 });

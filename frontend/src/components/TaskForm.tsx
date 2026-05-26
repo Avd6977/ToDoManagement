@@ -1,6 +1,9 @@
 import { FormEvent, useState } from "react";
 import type { Task } from "../types/Task";
 
+const TASK_DESCRIPTION_MAX_LENGTH = 2000;
+const TASK_TITLE_MAX_LENGTH = 200;
+
 interface TaskFormProps {
   onSubmit: (task: Partial<Task>) => Promise<void>;
   initialValue?: Partial<Task>;
@@ -46,8 +49,22 @@ export const TaskForm = ({
 
   const todayDateValue = toLocalDateInputValue(new Date());
   const initialDueDateValue = toDateInputValue(initialValue?.dueDate);
-  const titleError = touched.title && !title.trim() ? "Title is required." : "";
-  const descriptionError = touched.description && !description.trim() ? "Description is required." : "";
+  const titleTooLong = title.length > TASK_TITLE_MAX_LENGTH;
+  const titleError = touched.title
+    ? !title.trim()
+      ? "Title is required."
+      : titleTooLong
+        ? `Title must be ${TASK_TITLE_MAX_LENGTH} characters or fewer.`
+        : ""
+    : "";
+  const descriptionTooLong = description.length > TASK_DESCRIPTION_MAX_LENGTH;
+  const descriptionError = touched.description
+    ? !description.trim()
+      ? "Description is required."
+      : descriptionTooLong
+        ? `Description must be ${TASK_DESCRIPTION_MAX_LENGTH} characters or fewer.`
+        : ""
+    : "";
 
   const dueDateError = touched.dueDate
     ? dueDate && Number.isNaN(new Date(dueDate).getTime())
@@ -73,7 +90,7 @@ export const TaskForm = ({
     )
   );
 
-  const isFormValid = !!title.trim() && !!description.trim() && !hasInvalidDueDate;
+  const isFormValid = !!title.trim() && !titleTooLong && !!description.trim() && !descriptionTooLong && !hasInvalidDueDate;
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -106,9 +123,10 @@ export const TaskForm = ({
     <form onSubmit={handleSubmit} className="card task-form">
       <h3>{submitLabel}</h3>
       <label>
-        Title
+        Title*
         <input
           value={title}
+          maxLength={TASK_TITLE_MAX_LENGTH}
           onChange={(e) => {
             setTitle(e.target.value);
             setSubmitError("");
@@ -116,12 +134,16 @@ export const TaskForm = ({
           onBlur={() => setTouched((previous) => ({ ...previous, title: true }))}
           required
         />
+        <span className={`field-counter ${titleTooLong ? "error" : "hint"}`}>
+          {title.length}/{TASK_TITLE_MAX_LENGTH}
+        </span>
       </label>
       {titleError && <p className="error">{titleError}</p>}
       <label>
-        Description
+        Description*
         <textarea
           value={description}
+          maxLength={TASK_DESCRIPTION_MAX_LENGTH}
           onChange={(e) => {
             setDescription(e.target.value);
             setSubmitError("");
@@ -129,6 +151,9 @@ export const TaskForm = ({
           onBlur={() => setTouched((previous) => ({ ...previous, description: true }))}
           required
         />
+        <span className={`field-counter ${descriptionTooLong ? "error" : "hint"}`}>
+          {description.length}/{TASK_DESCRIPTION_MAX_LENGTH}
+        </span>
       </label>
       {descriptionError && <p className="error">{descriptionError}</p>}
       <label>

@@ -1,6 +1,9 @@
 import { FormEvent, useState } from "react";
 import type { User } from "../types/User";
 
+const FULL_NAME_MAX_LENGTH = 100;
+const USERNAME_MAX_LENGTH = 50;
+
 interface ProfileFormProps {
   user: User;
   onSave: (payload: {
@@ -8,9 +11,10 @@ interface ProfileFormProps {
     currentPassword?: string;
     newPassword?: string;
   }) => Promise<void>;
+  onCancel?: () => void;
 }
 
-export const ProfileForm = ({ user, onSave }: ProfileFormProps): JSX.Element => {
+export const ProfileForm = ({ user, onSave, onCancel }: ProfileFormProps): JSX.Element => {
   const [fullName, setFullName] = useState(user.fullName);
   const [username] = useState(user.username);
   const [currentPassword, setCurrentPassword] = useState("");
@@ -23,13 +27,20 @@ export const ProfileForm = ({ user, onSave }: ProfileFormProps): JSX.Element => 
     currentPassword: false,
     newPassword: false,
   });
+  const fullNameTooLong = fullName.length > FULL_NAME_MAX_LENGTH;
 
-  const fullNameError = touched.fullName && !fullName.trim() ? "Full name is required." : "";
+  const fullNameError = touched.fullName
+    ? !fullName.trim()
+      ? "Full name is required."
+      : fullNameTooLong
+        ? `Full name must be ${FULL_NAME_MAX_LENGTH} characters or fewer.`
+        : ""
+    : "";
   const currentPasswordRequired = !!newPassword.trim() && !currentPassword.trim();
   const currentPasswordError = (touched.currentPassword || touched.newPassword) && currentPasswordRequired
     ? "Current password is required to set a new password."
     : "";
-  const isFormValid = !!fullName.trim() && !currentPasswordRequired;
+  const isFormValid = !!fullName.trim() && !fullNameTooLong && !currentPasswordRequired;
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -67,21 +78,32 @@ export const ProfileForm = ({ user, onSave }: ProfileFormProps): JSX.Element => 
     <form onSubmit={handleSubmit} className="card">
       <h2>Edit Profile</h2>
       <label>
-        Full Name
+        Full Name*
         <input
           value={fullName}
+          maxLength={FULL_NAME_MAX_LENGTH}
           onChange={(event) => {
             setFullName(event.target.value);
             setSubmitError("");
           }}
           onBlur={() => setTouched((previous) => ({ ...previous, fullName: true }))}
         />
+        <span className={`field-counter ${fullNameTooLong ? "error" : "hint"}`}>
+          {fullName.length}/{FULL_NAME_MAX_LENGTH}
+        </span>
       </label>
       {fullNameError && <p className="error">{fullNameError}</p>}
 
       <label>
-        Username
-        <input value={username} disabled />
+        Username*
+        <input
+          value={username}
+          maxLength={USERNAME_MAX_LENGTH}
+          disabled
+          title="Username cannot be changed."
+          aria-label="Username (cannot be changed)"
+        />
+        <span className="field-counter hint">{username.length}/{USERNAME_MAX_LENGTH}</span>
       </label>
 
       <label>
@@ -113,13 +135,19 @@ export const ProfileForm = ({ user, onSave }: ProfileFormProps): JSX.Element => 
         />
       </label>
 
-      <p className="hint">Username cannot be changed.</p>
       {message && <p className="hint">{message}</p>}
       {submitError && <p className="error">{submitError}</p>}
 
-      <button type="submit" disabled={loading || !isFormValid}>
-        {loading ? "Saving..." : "Save Profile"}
-      </button>
+      <div className="actions">
+        <button type="submit" disabled={loading || !isFormValid}>
+          {loading ? "Saving..." : "Save Profile"}
+        </button>
+        {onCancel && (
+          <button type="button" onClick={onCancel} className="secondary">
+            Cancel
+          </button>
+        )}
+      </div>
     </form>
   );
 };

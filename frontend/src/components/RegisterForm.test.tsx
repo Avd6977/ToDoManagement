@@ -4,6 +4,18 @@ import { describe, expect, it, vi } from 'vitest';
 import { RegisterForm } from './RegisterForm';
 
 describe('RegisterForm', () => {
+    it('shows counters and max lengths for full name and username fields', () => {
+        const onAuthenticated = vi.fn();
+        const onBackToLoginClick = vi.fn();
+
+        render(<RegisterForm onAuthenticated={onAuthenticated} onBackToLoginClick={onBackToLoginClick} />);
+
+        expect(screen.getByText('0/100')).toBeInTheDocument();
+        expect(screen.getByText('0/50')).toBeInTheDocument();
+        expect(screen.getByLabelText(/^Full Name/)).toHaveAttribute('maxLength', '100');
+        expect(screen.getByLabelText(/^Username/)).toHaveAttribute('maxLength', '50');
+    });
+
     it('shows password validation error only after password field is touched', async () => {
         const user = userEvent.setup();
         const onAuthenticated = vi.fn();

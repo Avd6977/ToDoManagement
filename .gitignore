@@ -67,3 +67,6 @@ nunit-*.xml
 /backend/tasks.db
 /backend/tasks.db-shm
 /backend/tasks.db-wal
+
+# Rider IDE files
+.idea/

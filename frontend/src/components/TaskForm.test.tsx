@@ -11,6 +11,42 @@ const toLocalDateInputValue = (date: Date): string => {
 };
 
 describe('TaskForm', () => {
+    it('shows title character counter and applies db-length max on input', () => {
+        const onSubmit = vi.fn().mockResolvedValue(undefined);
+
+        render(
+            <TaskForm
+                submitLabel="Save Changes"
+                onSubmit={onSubmit}
+                initialValue={{
+                    title: 'abc',
+                    description: 'Task edit description'
+                }}
+            />
+        );
+
+        expect(screen.getByText('3/200')).toBeInTheDocument();
+        expect(screen.getByLabelText(/^Title/)).toHaveAttribute('maxLength', '200');
+    });
+
+    it('shows description character counter and applies db-length max on textarea', () => {
+        const onSubmit = vi.fn().mockResolvedValue(undefined);
+
+        render(
+            <TaskForm
+                submitLabel="Save Changes"
+                onSubmit={onSubmit}
+                initialValue={{
+                    title: 'Task edit',
+                    description: 'abc'
+                }}
+            />
+        );
+
+        expect(screen.getByText('3/2000')).toBeInTheDocument();
+        expect(screen.getByLabelText(/^Description/)).toHaveAttribute('maxLength', '2000');
+    });
+
     it('disables Save Changes when form is invalid', () => {
         const onSubmit = vi.fn().mockResolvedValue(undefined);
 
@@ -42,8 +78,8 @@ describe('TaskForm', () => {
             />
         );
 
-        await user.type(screen.getByLabelText('Title'), 'Task with invalid due date');
-        await user.type(screen.getByLabelText('Description'), 'Description');
+        await user.type(screen.getByLabelText(/^Title/), 'Task with invalid due date');
+        await user.type(screen.getByLabelText(/^Description/), 'Description');
         await user.type(screen.getByLabelText('Due Date'), yesterdayValue);
         await user.click(screen.getByRole('button', { name: 'Create Task' }));
 
@@ -76,7 +112,7 @@ describe('TaskForm', () => {
             />
         );
 
-        const dueDateInput = screen.getByLabelText('Due Date');
+        const dueDateInput = screen.getByLabelText(/^Due Date/);
         await user.clear(dueDateInput);
         await user.type(dueDateInput, yesterdayValue);
         await user.click(screen.getByRole('button', { name: 'Save Changes' }));
@@ -123,9 +159,9 @@ describe('TaskForm', () => {
 
         render(<TaskForm submitLabel="Save Changes" onSubmit={onSubmit} />);
 
-        await user.type(screen.getByLabelText('Title'), 'Task edit');
-        await user.type(screen.getByLabelText('Description'), 'Description');
-        await user.type(screen.getByLabelText('Due Date'), yesterdayValue);
+        await user.type(screen.getByLabelText(/^Title/), 'Task edit');
+        await user.type(screen.getByLabelText(/^Description/), 'Description');
+        await user.type(screen.getByLabelText(/^Due Date/), yesterdayValue);
         await user.click(screen.getByRole('button', { name: 'Save Changes' }));
 
         expect(onSubmit).toHaveBeenCalledTimes(1);

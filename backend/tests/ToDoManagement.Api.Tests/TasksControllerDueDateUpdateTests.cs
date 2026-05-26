@@ -5,11 +5,13 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Moq;
 using ToDoManagement.Api.Controllers;
 using ToDoManagement.Api.Data;
 using ToDoManagement.Api.Dtos;
 using ToDoManagement.Api.Models;
 using ToDoManagement.Api.Services;
+using ToDoManagement.Api.Services.Interfaces;
 using Xunit;
 
 namespace ToDoManagement.Api.Tests;
@@ -17,6 +19,13 @@ namespace ToDoManagement.Api.Tests;
 public sealed class TasksControllerDueDateUpdateTests
 {
     private static readonly DateTime FixedNowUtc = new(2026, 5, 25, 12, 0, 0, DateTimeKind.Utc);
+    private readonly Mock<IDateTimeService> _dateTimeServiceMock;
+
+    public TasksControllerDueDateUpdateTests()
+    {
+        _dateTimeServiceMock = new Mock<IDateTimeService>();
+        _dateTimeServiceMock.SetupGet(x => x.UtcNow).Returns(FixedNowUtc);
+    }
 
     [Fact]
     public async Task UpdateTask_Should_AllowUpdate_WhenPastDueDateIsUnchanged()
@@ -198,9 +207,10 @@ public sealed class TasksControllerDueDateUpdateTests
         updatedTask.DueDate.Should().Be(futureDueDate);
     }
 
-    private static TasksController CreateController(AppDbContext dbContext, Guid userId)
+    private TasksController CreateController(AppDbContext dbContext, Guid userId)
     {
-        var controller = new TasksController(dbContext, new FakeDateTimeService(FixedNowUtc));
+        var taskService = new TaskService(dbContext, _dateTimeServiceMock.Object);
+        var controller = new TasksController(taskService);
         var identity = new ClaimsIdentity(new[]
         {
             new Claim(ClaimTypes.NameIdentifier, userId.ToString())
@@ -215,15 +225,5 @@ public sealed class TasksControllerDueDateUpdateTests
         };
 
         return controller;
-    }
-
-    private sealed class FakeDateTimeService : IDateTimeService
-    {
-        public FakeDateTimeService(DateTime utcNow)
-        {
-            UtcNow = utcNow;
-        }
-
-        public DateTime UtcNow { get; }
     }
 }

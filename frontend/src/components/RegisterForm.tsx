@@ -2,6 +2,9 @@ import { FormEvent, useState } from "react";
 import type { User } from "../types/User";
 import { register } from "../services/api";
 
+const FULL_NAME_MAX_LENGTH = 100;
+const USERNAME_MAX_LENGTH = 50;
+
 interface RegisterFormProps {
   onAuthenticated: (user: User) => void;
   onBackToLoginClick: () => void;
@@ -22,9 +25,23 @@ export const RegisterForm = ({ onAuthenticated, onBackToLoginClick }: RegisterFo
   const hasLetter = /[A-Za-z]/.test(password);
   const hasNumber = /[0-9]/.test(password);
   const hasSpecialCharacter = /[^A-Za-z0-9]/.test(password);
+  const fullNameTooLong = fullName.length > FULL_NAME_MAX_LENGTH;
+  const usernameTooLong = username.length > USERNAME_MAX_LENGTH;
 
-  const fullNameError = touched.fullName && !fullName.trim() ? "Full name is required." : "";
-  const usernameError = touched.username && !username.trim() ? "Username is required." : "";
+  const fullNameError = touched.fullName
+    ? !fullName.trim()
+      ? "Full name is required."
+      : fullNameTooLong
+        ? `Full name must be ${FULL_NAME_MAX_LENGTH} characters or fewer.`
+        : ""
+    : "";
+  const usernameError = touched.username
+    ? !username.trim()
+      ? "Username is required."
+      : usernameTooLong
+        ? `Username must be ${USERNAME_MAX_LENGTH} characters or fewer.`
+        : ""
+    : "";
   const passwordError = touched.password
     ? !password.trim()
       ? "Password is required."
@@ -40,7 +57,9 @@ export const RegisterForm = ({ onAuthenticated, onBackToLoginClick }: RegisterFo
     : "";
 
   const isFormValid = !!fullName.trim()
+    && !fullNameTooLong
     && !!username.trim()
+    && !usernameTooLong
     && !!password.trim()
     && password.length >= 8
     && hasLetter
@@ -74,24 +93,32 @@ export const RegisterForm = ({ onAuthenticated, onBackToLoginClick }: RegisterFo
         Full Name*
         <input
           value={fullName}
+          maxLength={FULL_NAME_MAX_LENGTH}
           onChange={(e) => {
             setFullName(e.target.value);
             setSubmitError("");
           }}
           onBlur={() => setTouched((previous) => ({ ...previous, fullName: true }))}
         />
+        <span className={`field-counter ${fullNameTooLong ? "error" : "hint"}`}>
+          {fullName.length}/{FULL_NAME_MAX_LENGTH}
+        </span>
       </label>
       {fullNameError && <p className="error">{fullNameError}</p>}
       <label>
         Username*
         <input
           value={username}
+          maxLength={USERNAME_MAX_LENGTH}
           onChange={(e) => {
             setUsername(e.target.value);
             setSubmitError("");
           }}
           onBlur={() => setTouched((previous) => ({ ...previous, username: true }))}
         />
+        <span className={`field-counter ${usernameTooLong ? "error" : "hint"}`}>
+          {username.length}/{USERNAME_MAX_LENGTH}
+        </span>
       </label>
       {usernameError && <p className="error">{usernameError}</p>}
       <label>

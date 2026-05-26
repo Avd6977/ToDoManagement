@@ -247,11 +247,11 @@ const App = (): JSX.Element => {
                 <button
                   type="button"
                   className="create-plus-button"
-                  title="Create new task"
-                  aria-label="Create new task"
+                  title="Create Task"
+                  aria-label="Create Task"
                   onClick={() => navigate("/create-task")}
                 >
-                  +
+                  Create Task +
                 </button>
               )}
             />
@@ -324,6 +324,7 @@ const App = (): JSX.Element => {
               submitLabel="Create Task"
               onSubmit={handleCreate}
               minDueDate={toLocalDateInputValue(new Date())}
+              onCancel={() => navigate("/tasks")}
             />
           </main>
         )}
@@ -340,7 +341,11 @@ const App = (): JSX.Element => {
               onBack={() => navigate("/tasks")}
             />
 
-            <ProfileForm user={user} onSave={handleSaveProfile} />
+            <ProfileForm
+              user={user}
+              onSave={handleSaveProfile}
+              onCancel={() => navigate("/tasks")}
+            />
           </main>
         )}
       />

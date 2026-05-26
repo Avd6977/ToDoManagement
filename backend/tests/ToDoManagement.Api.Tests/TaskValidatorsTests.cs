@@ -1,7 +1,8 @@
 using FluentAssertions;
 using FluentAssertions.Execution;
+using Moq;
 using ToDoManagement.Api.Dtos;
-using ToDoManagement.Api.Services;
+using ToDoManagement.Api.Services.Interfaces;
 using ToDoManagement.Api.Validators;
 using Xunit;
 
@@ -10,6 +11,18 @@ namespace ToDoManagement.Api.Tests;
 public sealed class TaskValidatorsTests
 {
     private static readonly DateTime FixedNowUtc = new(2026, 5, 25, 12, 0, 0, DateTimeKind.Utc);
+    private const int MaxDescriptionLength = 2000;
+    private readonly Mock<IDateTimeService> _dateTimeServiceMock;
+    private readonly CreateTaskRequestValidator _createTaskRequestValidator;
+    private readonly UpdateTaskRequestValidator _updateTaskRequestValidator;
+
+    public TaskValidatorsTests()
+    {
+        _dateTimeServiceMock = new Mock<IDateTimeService>();
+        _dateTimeServiceMock.SetupGet(x => x.UtcNow).Returns(FixedNowUtc);
+        _createTaskRequestValidator = new CreateTaskRequestValidator(_dateTimeServiceMock.Object);
+        _updateTaskRequestValidator = new UpdateTaskRequestValidator();
+    }
 
     [Theory]
     [InlineData(-1, false)]
@@ -18,8 +31,6 @@ public sealed class TaskValidatorsTests
     public void CreateTaskRequestValidator_Should_RejectPastDueDates(int dueDateOffsetDays, bool isValid)
     {
         // ARRANGE
-        var dateTimeService = new FakeDateTimeService(FixedNowUtc);
-        var validator = new CreateTaskRequestValidator(dateTimeService);
         var request = new CreateTaskRequest
         {
             Title = "Task title",
@@ -28,7 +39,7 @@ public sealed class TaskValidatorsTests
         };
 
         // ACT
-        var result = validator.Validate(request);
+        var result = _createTaskRequestValidator.Validate(request);
 
         // ASSERT
         using var scope = new AssertionScope();
@@ -48,7 +59,6 @@ public sealed class TaskValidatorsTests
     public void UpdateTaskRequestValidator_Should_AllowValidDateFormats(int dueDateOffsetDays, bool isValid)
     {
         // ARRANGE
-        var validator = new UpdateTaskRequestValidator();
         var request = new UpdateTaskRequest
         {
             Title = "Task title",
@@ -58,20 +68,64 @@ public sealed class TaskValidatorsTests
         };
 
         // ACT
-        var result = validator.Validate(request);
+        var result = _updateTaskRequestValidator.Validate(request);
 
         // ASSERT
         using var scope = new AssertionScope();
         result.IsValid.Should().Be(isValid);
     }
 
-    private sealed class FakeDateTimeService : IDateTimeService
+    [Theory]
+    [InlineData(MaxDescriptionLength, true)]
+    [InlineData(MaxDescriptionLength + 1, false)]
+    public void CreateTaskRequestValidator_Should_EnforceDescriptionLength(int descriptionLength, bool isValid)
     {
-        public FakeDateTimeService(DateTime utcNow)
+        // ARRANGE
+        var request = new CreateTaskRequest
         {
-            UtcNow = utcNow;
-        }
+            Title = "Task title",
+            Description = new string('a', descriptionLength),
+            DueDate = FixedNowUtc.Date
+        };
 
-        public DateTime UtcNow { get; }
+        // ACT
+        var result = _createTaskRequestValidator.Validate(request);
+
+        // ASSERT
+        using var scope = new AssertionScope();
+        result.IsValid.Should().Be(isValid);
+        if (!isValid)
+        {
+            result.Errors.Select(e => e.ErrorMessage)
+                .Should().Contain("Description must be 2000 characters or fewer.");
+        }
     }
+
+    [Theory]
+    [InlineData(MaxDescriptionLength, true)]
+    [InlineData(MaxDescriptionLength + 1, false)]
+    public void UpdateTaskRequestValidator_Should_EnforceDescriptionLength(int descriptionLength, bool isValid)
+    {
+        // ARRANGE
+        var request = new UpdateTaskRequest
+        {
+            Title = "Task title",
+            Description = new string('a', descriptionLength),
+            DueDate = FixedNowUtc.Date,
+            IsCompleted = false
+        };
+
+        // ACT
+        var result = _updateTaskRequestValidator.Validate(request);
+
+        // ASSERT
+        using var scope = new AssertionScope();
+        result.IsValid.Should().Be(isValid);
+        if (!isValid)
+        {
+            result.Errors.Select(e => e.ErrorMessage)
+                .Should().Contain("Description must be 2000 characters or fewer.");
+        }
+    }
+
 }

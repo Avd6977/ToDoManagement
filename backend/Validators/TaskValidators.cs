@@ -1,6 +1,6 @@
 using FluentValidation;
 using ToDoManagement.Api.Dtos;
-using ToDoManagement.Api.Services;
+using ToDoManagement.Api.Services.Interfaces;
 
 namespace ToDoManagement.Api.Validators;
 

@@ -7,6 +7,7 @@ using SharpGrip.FluentValidation.AutoValidation.Mvc.Extensions;
 using ToDoManagement.Api.Data;
 using ToDoManagement.Api.Dtos;
 using ToDoManagement.Api.Services;
+using ToDoManagement.Api.Services.Interfaces;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -28,6 +29,8 @@ builder.Services.AddScoped<IPasswordHasherService, PasswordHasherService>();
 builder.Services.AddScoped<IDateTimeService, DateTimeService>();
 builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
 builder.Services.AddScoped<IRefreshTokenService, RefreshTokenService>();
+builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<ITaskService, TaskService>();
 
 builder.Services.Configure<JwtTokenDto>(builder.Configuration.GetSection("Jwt"));
 
