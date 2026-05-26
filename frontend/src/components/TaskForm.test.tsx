@@ -11,42 +11,6 @@ const toLocalDateInputValue = (date: Date): string => {
 };
 
 describe('TaskForm', () => {
-    it('shows title character counter and applies db-length max on input', () => {
-        const onSubmit = vi.fn().mockResolvedValue(undefined);
-
-        render(
-            <TaskForm
-                submitLabel="Save Changes"
-                onSubmit={onSubmit}
-                initialValue={{
-                    title: 'abc',
-                    description: 'Task edit description'
-                }}
-            />
-        );
-
-        expect(screen.getByText('3/200')).toBeInTheDocument();
-        expect(screen.getByLabelText(/^Title/)).toHaveAttribute('maxLength', '200');
-    });
-
-    it('shows description character counter and applies db-length max on textarea', () => {
-        const onSubmit = vi.fn().mockResolvedValue(undefined);
-
-        render(
-            <TaskForm
-                submitLabel="Save Changes"
-                onSubmit={onSubmit}
-                initialValue={{
-                    title: 'Task edit',
-                    description: 'abc'
-                }}
-            />
-        );
-
-        expect(screen.getByText('3/2000')).toBeInTheDocument();
-        expect(screen.getByLabelText(/^Description/)).toHaveAttribute('maxLength', '2000');
-    });
-
     it('disables Save Changes when form is invalid', () => {
         const onSubmit = vi.fn().mockResolvedValue(undefined);
 

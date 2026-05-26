@@ -70,3 +70,4 @@ nunit-*.xml
 
 # Rider IDE files
 .idea/
+backend/Folder.DotSettings.user

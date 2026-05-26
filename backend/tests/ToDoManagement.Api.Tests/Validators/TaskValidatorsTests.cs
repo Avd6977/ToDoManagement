@@ -6,21 +6,20 @@ using ToDoManagement.Api.Services.Interfaces;
 using ToDoManagement.Api.Validators;
 using Xunit;
 
-namespace ToDoManagement.Api.Tests;
+namespace ToDoManagement.Api.Tests.Validators;
 
 public sealed class TaskValidatorsTests
 {
     private static readonly DateTime FixedNowUtc = new(2026, 5, 25, 12, 0, 0, DateTimeKind.Utc);
     private const int MaxDescriptionLength = 2000;
-    private readonly Mock<IDateTimeService> _dateTimeServiceMock;
     private readonly CreateTaskRequestValidator _createTaskRequestValidator;
     private readonly UpdateTaskRequestValidator _updateTaskRequestValidator;
 
     public TaskValidatorsTests()
     {
-        _dateTimeServiceMock = new Mock<IDateTimeService>();
-        _dateTimeServiceMock.SetupGet(x => x.UtcNow).Returns(FixedNowUtc);
-        _createTaskRequestValidator = new CreateTaskRequestValidator(_dateTimeServiceMock.Object);
+        var dateTimeServiceMock = new Mock<IDateTimeService>();
+        dateTimeServiceMock.SetupGet(x => x.UtcNow).Returns(FixedNowUtc);
+        _createTaskRequestValidator = new CreateTaskRequestValidator(dateTimeServiceMock.Object);
         _updateTaskRequestValidator = new UpdateTaskRequestValidator();
     }
 
@@ -129,3 +128,4 @@ public sealed class TaskValidatorsTests
     }
 
 }
+

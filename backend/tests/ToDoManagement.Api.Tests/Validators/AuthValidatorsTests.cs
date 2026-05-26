@@ -4,7 +4,7 @@ using ToDoManagement.Api.Dtos;
 using ToDoManagement.Api.Validators;
 using Xunit;
 
-namespace ToDoManagement.Api.Tests;
+namespace ToDoManagement.Api.Tests.Validators;
 
 public sealed class AuthValidatorsTests
 {
@@ -181,3 +181,4 @@ public sealed class AuthValidatorsTests
         result.IsValid.Should().BeTrue();
     }
 }
+

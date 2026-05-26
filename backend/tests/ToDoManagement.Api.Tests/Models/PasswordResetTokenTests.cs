@@ -3,7 +3,7 @@ using FluentAssertions.Execution;
 using ToDoManagement.Api.Models;
 using Xunit;
 
-namespace ToDoManagement.Api.Tests;
+namespace ToDoManagement.Api.Tests.Models;
 
 public sealed class PasswordResetTokenTests
 {
@@ -45,3 +45,4 @@ public sealed class PasswordResetTokenTests
         result.Should().BeFalse();
     }
 }
+

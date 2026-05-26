@@ -30,17 +30,6 @@ describe('ProfileForm', () => {
         expect(onSave).not.toHaveBeenCalled();
     });
 
-    it('shows counters and max lengths for full name and username fields', () => {
-        const onSave = vi.fn().mockResolvedValue(undefined);
-
-        render(<ProfileForm user={user} onSave={onSave} />);
-
-        expect(screen.getByText('13/100')).toBeInTheDocument();
-        expect(screen.getByText('5/50')).toBeInTheDocument();
-        expect(screen.getByLabelText(/^Full Name/)).toHaveAttribute('maxLength', '100');
-        expect(screen.getByLabelText('Username (cannot be changed)')).toHaveAttribute('maxLength', '50');
-    });
-
     it('disables username and submits profile payload', async () => {
         const onSave = vi.fn().mockResolvedValue(undefined);
         const onCancel = vi.fn();

@@ -3,7 +3,7 @@ using FluentAssertions.Execution;
 using ToDoManagement.Api.Services;
 using Xunit;
 
-namespace ToDoManagement.Api.Tests;
+namespace ToDoManagement.Api.Tests.Services;
 
 public sealed class PasswordHasherServiceTests
 {
@@ -41,3 +41,4 @@ public sealed class PasswordHasherServiceTests
         isValid.Should().BeFalse();
     }
 }
+

@@ -14,7 +14,7 @@ using ToDoManagement.Api.Services;
 using ToDoManagement.Api.Services.Interfaces;
 using Xunit;
 
-namespace ToDoManagement.Api.Tests;
+namespace ToDoManagement.Api.Tests.Controllers;
 
 public sealed class TasksControllerDueDateUpdateTests
 {
@@ -227,3 +227,4 @@ public sealed class TasksControllerDueDateUpdateTests
         return controller;
     }
 }
+
