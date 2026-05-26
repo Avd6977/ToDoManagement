@@ -129,6 +129,71 @@ describe('App auth screen', () => {
         expect(await screen.findByRole('navigation', { name: 'Completed pagination' })).toBeInTheDocument();
     });
 
+    it('shows applied filter count bubble and active icon state when filters differ from defaults', async () => {
+        const user = userEvent.setup();
+
+        localStorage.setItem('todo_jwt', 'test-jwt-token');
+        localStorage.setItem('todo_refresh_token', 'test-refresh-token');
+        localStorage.setItem(
+            'todo_user',
+            JSON.stringify({
+                id: '11111111-1111-1111-1111-111111111111',
+                fullName: 'Alice Johnson',
+                email: 'alice@todo.local'
+            })
+        );
+
+        render(
+            <MemoryRouter initialEntries={['/tasks']}>
+                <App />
+            </MemoryRouter>
+        );
+
+        const sortButton = await screen.findByRole('button', { name: 'Sort and Filter' });
+
+        await user.click(sortButton);
+        await user.click(screen.getByRole('button', { name: 'Due Date' }));
+
+        const filterButton = await screen.findByRole('button', { name: 'Sort and Filter' });
+        expect(filterButton.className.includes('active-filter')).toBe(true);
+        expect(screen.getByLabelText('1 applied filters')).toBeInTheDocument();
+    });
+
+    it('resets filters back to defaults from the popover', async () => {
+        const user = userEvent.setup();
+
+        localStorage.setItem('todo_jwt', 'test-jwt-token');
+        localStorage.setItem('todo_refresh_token', 'test-refresh-token');
+        localStorage.setItem(
+            'todo_user',
+            JSON.stringify({
+                id: '11111111-1111-1111-1111-111111111111',
+                fullName: 'Alice Johnson',
+                email: 'alice@todo.local'
+            })
+        );
+
+        render(
+            <MemoryRouter initialEntries={['/tasks']}>
+                <App />
+            </MemoryRouter>
+        );
+
+        const sortButton = await screen.findByRole('button', { name: 'Sort and Filter' });
+
+        await user.click(sortButton);
+        await user.click(screen.getByRole('button', { name: 'Due Date' }));
+
+        await user.click(await screen.findByRole('button', { name: 'Sort and Filter' }));
+        await user.click(screen.getByRole('button', { name: 'Overdue Only' }));
+
+        await user.click(await screen.findByRole('button', { name: 'Sort and Filter' }));
+        await user.click(screen.getByRole('button', { name: 'Reset Filters' }));
+
+        expect(screen.queryByLabelText(/applied filters/)).not.toBeInTheDocument();
+        expect((await screen.findByRole('button', { name: 'Sort and Filter' })).className.includes('active-filter')).toBe(false);
+    });
+
     it('renders profile screen at /profile for authenticated users', async () => {
         localStorage.setItem('todo_jwt', 'test-jwt-token');
         localStorage.setItem('todo_refresh_token', 'test-refresh-token');

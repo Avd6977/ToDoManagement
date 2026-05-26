@@ -67,7 +67,16 @@ export const TaskItem = ({
         <>
           <div className="task-item-row">
             <div className="task-item-content">
-              <p>
+              <p className="task-item-title-row">
+                <button
+                  type="button"
+                  className={`task-status-toggle ${task.isCompleted ? "completed" : ""}`}
+                  onClick={handleToggle}
+                  aria-label={task.isCompleted ? "Mark Incomplete" : "Mark Complete"}
+                  title={task.isCompleted ? "Mark Incomplete" : "Mark Complete"}
+                >
+                  <span className="task-status-check" aria-hidden="true">✓</span>
+                </button>
                 <strong>{task.description}</strong>
                 {isOverdue && (
                   <span className="overdue-icon" title="Overdue" aria-label="Overdue">⚠</span>
@@ -85,15 +94,6 @@ export const TaskItem = ({
                 title="Edit"
               >
                 <span aria-hidden="true">✎</span>
-              </button>
-              <button
-                type="button"
-                className="task-action-button"
-                onClick={handleToggle}
-                aria-label={task.isCompleted ? "Mark Incomplete" : "Mark Complete"}
-                title={task.isCompleted ? "Mark Incomplete" : "Mark Complete"}
-              >
-                <span aria-hidden="true">{task.isCompleted ? "☑" : "☐"}</span>
               </button>
               <button
                 type="button"

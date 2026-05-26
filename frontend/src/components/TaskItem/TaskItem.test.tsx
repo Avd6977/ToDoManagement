@@ -87,4 +87,56 @@ describe("TaskItem", () => {
 
     expect(screen.queryByLabelText("Overdue")).not.toBeInTheDocument();
   });
+
+  it("renders completion icon to the left of title and fills when completed", async () => {
+    const user = userEvent.setup();
+    const onToggleComplete = vi.fn().mockResolvedValue(undefined);
+
+    const task: Task = {
+      id: "task-3",
+      description: "Task icon check",
+      dueDate: null,
+      isCompleted: false,
+    };
+
+    const currentUser: User = {
+      id: "user-1",
+      fullName: "Alice User",
+      email: "alice@todo.local",
+    };
+
+    const { container, rerender } = render(
+      <TaskItem
+        task={task}
+        currentUser={currentUser}
+        onToggleComplete={onToggleComplete}
+        onDelete={vi.fn().mockResolvedValue(undefined)}
+        onUpdate={vi.fn().mockResolvedValue(undefined)}
+      />
+    );
+
+    const statusButton = screen.getByRole("button", { name: "Mark Complete" });
+    const titleText = screen.getByText("Task icon check");
+
+    expect(statusButton).toHaveClass("task-status-toggle");
+    expect(statusButton.className.includes("completed")).toBe(false);
+    expect(titleText.compareDocumentPosition(statusButton) & Node.DOCUMENT_POSITION_PRECEDING).toBeTruthy();
+
+    await user.click(statusButton);
+    expect(onToggleComplete).toHaveBeenCalledTimes(1);
+
+    rerender(
+      <TaskItem
+        task={{ ...task, isCompleted: true }}
+        currentUser={currentUser}
+        onToggleComplete={onToggleComplete}
+        onDelete={vi.fn().mockResolvedValue(undefined)}
+        onUpdate={vi.fn().mockResolvedValue(undefined)}
+      />
+    );
+
+    const completedButton = screen.getByRole("button", { name: "Mark Incomplete" });
+    expect(completedButton.className.includes("completed")).toBe(true);
+    expect(container.querySelector(".task-status-check")).toBeTruthy();
+  });
 });

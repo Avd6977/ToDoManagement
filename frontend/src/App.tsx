@@ -31,6 +31,9 @@ const toLocalDateInputValue = (date: Date): string => {
 };
 
 const DEFAULT_TASK_PAGE_SIZE = 25;
+const DEFAULT_SORT_OPTION: TaskSortOption = "recentlyAdded";
+const DEFAULT_SORT_DIRECTION: SortDirection = "asc";
+const DEFAULT_OVERDUE_ONLY = false;
 
 const App = (): JSX.Element => {
   const [user, setUser] = useState<User | null>(getStoredUser());
@@ -45,13 +48,17 @@ const App = (): JSX.Element => {
   const [completedTasksPage, setCompletedTasksPage] = useState(1);
   const [completedTasksTotalPages, setCompletedTasksTotalPages] = useState(0);
   const [taskQueryVersion, setTaskQueryVersion] = useState(0);
-  const [sortOption, setSortOption] = useState<TaskSortOption>("recentlyAdded");
-  const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
+  const [sortOption, setSortOption] = useState<TaskSortOption>(DEFAULT_SORT_OPTION);
+  const [sortDirection, setSortDirection] = useState<SortDirection>(DEFAULT_SORT_DIRECTION);
   const [taskPageSize, setTaskPageSize] = useState(DEFAULT_TASK_PAGE_SIZE);
   const [overdueOnly, setOverdueOnly] = useState(false);
   const [isSortMenuOpen, setIsSortMenuOpen] = useState(false);
   const sortMenuRef = useRef<HTMLDivElement | null>(null);
   const navigate = useNavigate();
+
+  const appliedFilterCount = Number(sortOption !== DEFAULT_SORT_OPTION)
+    + Number(sortDirection !== DEFAULT_SORT_DIRECTION)
+    + Number(overdueOnly !== DEFAULT_OVERDUE_ONLY);
 
   const loadTasks = async (status: TaskStatusFilter, options?: { force?: boolean; page?: number }) => {
     if (!user) {
@@ -123,7 +130,7 @@ const App = (): JSX.Element => {
       return;
     }
     setSortOption(nextSort);
-    setSortDirection("asc");
+    setSortDirection(DEFAULT_SORT_DIRECTION);
     setOpenTasksPage(1);
     setCompletedTasksPage(1);
     setTaskQueryVersion((previous) => previous + 1);
@@ -133,6 +140,26 @@ const App = (): JSX.Element => {
 
   const handleSortDirectionSelect = (nextDirection: SortDirection) => {
     setSortDirection(nextDirection);
+    setOpenTasksPage(1);
+    setCompletedTasksPage(1);
+    setTaskQueryVersion((previous) => previous + 1);
+    setCompletedTasks(null);
+    setIsSortMenuOpen(false);
+  };
+
+  const handleResetFilters = () => {
+    if (
+      sortOption === DEFAULT_SORT_OPTION
+      && sortDirection === DEFAULT_SORT_DIRECTION
+      && overdueOnly === DEFAULT_OVERDUE_ONLY
+    ) {
+      setIsSortMenuOpen(false);
+      return;
+    }
+
+    setSortOption(DEFAULT_SORT_OPTION);
+    setSortDirection(DEFAULT_SORT_DIRECTION);
+    setOverdueOnly(DEFAULT_OVERDUE_ONLY);
     setOpenTasksPage(1);
     setCompletedTasksPage(1);
     setTaskQueryVersion((previous) => previous + 1);
@@ -176,7 +203,7 @@ const App = (): JSX.Element => {
       setTaskQueryVersion((previous) => previous + 1);
       setIsCompletedExpanded(false);
       setSearchTerm("");
-      setOverdueOnly(false);
+      setOverdueOnly(DEFAULT_OVERDUE_ONLY);
       setIsSortMenuOpen(false);
       setTaskPageSize(DEFAULT_TASK_PAGE_SIZE);
       navigate("/");
@@ -334,7 +361,7 @@ const App = (): JSX.Element => {
               <div className="sort-menu-wrapper sort-menu-right" ref={sortMenuRef}>
                 <button
                   type="button"
-                  className="sort-icon-button secondary"
+                  className={`sort-icon-button secondary ${appliedFilterCount > 0 ? "active-filter" : ""}`}
                   title="Sort and Filter"
                   aria-label="Sort and Filter"
                   onClick={() => setIsSortMenuOpen((previous) => !previous)}
@@ -351,6 +378,11 @@ const App = (): JSX.Element => {
                       fill="currentColor"
                     />
                   </svg>
+                  {appliedFilterCount > 0 && (
+                    <span className="filter-count-bubble" aria-label={`${appliedFilterCount} applied filters`}>
+                      {appliedFilterCount}
+                    </span>
+                  )}
                 </button>
 
                 {isSortMenuOpen && (
@@ -413,6 +445,16 @@ const App = (): JSX.Element => {
                         }}
                       >
                         Overdue Only
+                      </button>
+                    </div>
+
+                    <div className="actions">
+                      <button
+                        type="button"
+                        className="secondary"
+                        onClick={handleResetFilters}
+                      >
+                        Reset Filters
                       </button>
                     </div>
                   </div>

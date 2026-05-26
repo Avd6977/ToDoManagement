@@ -45,6 +45,7 @@ Validate the full UI flow end to end using the in-app browser:
 | A03 | Register a new user with valid data | Registration succeeds and dashboard loads authenticated state |  |  |
 | A04 | Verify header/profile menu appears | Header shows profile controls and authenticated UI |  |  |
 | A05 | Create Task 001 | Task 001 appears in open task list |  |  |
+| A05a | Verify completion icon presentation | An empty circle appears to the left of task title; when completed it fills and shows a checkmark |  |  |
 | A06 | Logout | User is redirected to login |  |  |
 | A07 | Login with same user | Dashboard loads and Task 001 is visible |  |  |
 | A08 | Navigate to Profile | Profile page loads with current user data |  |  |
@@ -60,6 +61,8 @@ Validate the full UI flow end to end using the in-app browser:
 | A18 | Set page size to 50 | Page size updates and total pages recompute correctly |  |  |
 | A19 | Set page size to 100 | Single-page behavior is correct when applicable |  |  |
 | A20 | Toggle Overdue Only filter on and off | Overdue-only view and default view both return expected task subsets |  |  |
+| A20a | Change sort/filter away from defaults | Filter icon changes color and a filter-count bubble appears with number of non-default filters |  |  |
+| A20b | Click Reset Filters in popover | Sort/filter values return to defaults, icon color resets, and filter-count bubble disappears |  |  |
 | A21 | Apply sort Recently Added ascending | Items are ordered by created timestamp ascending |  |  |
 | A22 | Apply sort Recently Added descending | Items are ordered by created timestamp descending |  |  |
 | A23 | Apply sort Alphabetical ascending | Items ordered by description A to Z |  |  |
