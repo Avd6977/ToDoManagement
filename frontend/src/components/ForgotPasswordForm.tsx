@@ -8,18 +8,22 @@ interface ForgotPasswordFormProps {
 export const ForgotPasswordForm = ({ onRequestSucceeded }: ForgotPasswordFormProps): JSX.Element => {
   const [username, setUsername] = useState("");
   const [message, setMessage] = useState("");
-  const [error, setError] = useState("");
+  const [submitError, setSubmitError] = useState("");
   const [tokenPreview, setTokenPreview] = useState("");
   const [loading, setLoading] = useState(false);
+  const [usernameTouched, setUsernameTouched] = useState(false);
+
+  const usernameError = usernameTouched && !username.trim() ? "Username is required." : "";
+  const isFormValid = !!username.trim();
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
-    setError("");
+    setSubmitError("");
     setMessage("");
     setTokenPreview("");
 
-    if (!username.trim()) {
-      setError("Username is required.");
+    if (!isFormValid) {
+      setUsernameTouched(true);
       return;
     }
 
@@ -33,7 +37,7 @@ export const ForgotPasswordForm = ({ onRequestSucceeded }: ForgotPasswordFormPro
         setTokenPreview(response.resetToken);
       }
     } catch (err: any) {
-      setError(err?.response?.data?.message ?? "Forgot password request failed.");
+      setSubmitError(err?.response?.data?.message ?? "Forgot password request failed.");
     } finally {
       setLoading(false);
     }
@@ -44,12 +48,20 @@ export const ForgotPasswordForm = ({ onRequestSucceeded }: ForgotPasswordFormPro
       <h2>Forgot Password</h2>
       <label>
         Username
-        <input value={username} onChange={(e) => setUsername(e.target.value)} />
+        <input
+          value={username}
+          onChange={(e) => {
+            setUsername(e.target.value);
+            setSubmitError("");
+          }}
+          onBlur={() => setUsernameTouched(true)}
+        />
       </label>
+      {usernameError && <p className="error">{usernameError}</p>}
       {message && <p className="hint">{message}</p>}
       {tokenPreview && <p className="token-preview">Reset token: {tokenPreview}</p>}
-      {error && <p className="error">{error}</p>}
-      <button type="submit" disabled={loading}>
+      {submitError && <p className="error">{submitError}</p>}
+      <button type="submit" disabled={loading || !isFormValid}>
         {loading ? "Requesting..." : "Request Reset"}
       </button>
     </form>

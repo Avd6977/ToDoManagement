@@ -4,13 +4,23 @@ import { describe, expect, it } from 'vitest';
 import { ResetPasswordForm } from './ResetPasswordForm';
 
 describe('ResetPasswordForm', () => {
-    it('shows validation error when required fields are missing', async () => {
+    it('disables submit until fields are valid and shows field errors only after touch', async () => {
         const user = userEvent.setup();
         render(<ResetPasswordForm />);
 
+        const submitButton = screen.getByRole('button', { name: 'Reset Password' });
+        expect(submitButton).toBeDisabled();
+        expect(screen.queryByText('Reset token is required.')).not.toBeInTheDocument();
+        expect(screen.queryByText('New password is required.')).not.toBeInTheDocument();
+
+        await user.click(screen.getByLabelText('Reset Token'));
+        await user.tab();
+        await user.click(screen.getByLabelText('New Password'));
+        await user.tab();
         await user.click(screen.getByRole('button', { name: 'Reset Password' }));
 
-        expect(screen.getByText('Reset token and new password are required.')).toBeInTheDocument();
+        expect(screen.getByText('Reset token is required.')).toBeInTheDocument();
+        expect(screen.getByText('New password is required.')).toBeInTheDocument();
     });
 
     it('resets password successfully with valid token and password', async () => {

@@ -3,6 +3,13 @@ import type { Task } from "../types/Task";
 import type { User } from "../types/User";
 import { TaskForm } from "./TaskForm";
 
+const toLocalDateInputValue = (date: Date): string => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
 interface TaskItemProps {
   task: Task;
   currentUser: User;
@@ -84,6 +91,8 @@ export const TaskItem = ({
           submitLabel="Save Changes"
           initialValue={task}
           onSubmit={handleUpdate}
+          minDueDate={toLocalDateInputValue(new Date())}
+          enforceNoPastDueDateChanges
           onCancel={() => setIsEditing(false)}
         />
       )}

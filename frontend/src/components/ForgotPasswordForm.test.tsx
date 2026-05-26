@@ -4,10 +4,16 @@ import { describe, expect, it } from 'vitest';
 import { ForgotPasswordForm } from './ForgotPasswordForm';
 
 describe('ForgotPasswordForm', () => {
-    it('shows validation error when username is empty', async () => {
+    it('disables submit until username is valid and only shows error after touch', async () => {
         const user = userEvent.setup();
         render(<ForgotPasswordForm />);
 
+        const submitButton = screen.getByRole('button', { name: 'Request Reset' });
+        expect(submitButton).toBeDisabled();
+        expect(screen.queryByText('Username is required.')).not.toBeInTheDocument();
+
+        await user.click(screen.getByLabelText('Username'));
+        await user.tab();
         await user.click(screen.getByRole('button', { name: 'Request Reset' }));
 
         expect(screen.getByText('Username is required.')).toBeInTheDocument();

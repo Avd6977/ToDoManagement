@@ -20,9 +20,13 @@ describe('ProfileForm', () => {
         await userEventSetup.clear(screen.getByLabelText('Full Name'));
         await userEventSetup.type(screen.getByLabelText('Full Name'), 'Alice Johnson');
         await userEventSetup.type(screen.getByLabelText('New Password'), 'NewStrong1!');
-        await userEventSetup.click(screen.getByRole('button', { name: 'Save Profile' }));
+        await userEventSetup.tab();
 
         expect(screen.getByText('Current password is required to set a new password.')).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Save Profile' })).toBeDisabled();
+
+        await userEventSetup.click(screen.getByRole('button', { name: 'Save Profile' }));
+
         expect(onSave).not.toHaveBeenCalled();
     });
 

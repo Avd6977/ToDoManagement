@@ -298,6 +298,14 @@ All endpoints require Bearer token.
 - Login view includes inline links under Password: `Register` (left) and `Forgot Password?` (right).
 - JWT is stored client-side and sent as `Authorization: Bearer <token>`.
 - Header includes a profile dropdown with full name + logout actions.
+- Forms use touched-field validation:
+  - Field-level validation messages are shown only after the field has been touched (blurred).
+  - Save/submit buttons are disabled until form inputs are valid.
+- Task due date UX:
+  - Create and edit date pickers use a min date of today to prevent selecting past dates.
+  - Edit flow allows updates when an existing past due date is unchanged, but blocks changes to a new past date.
+- Global auth guard:
+  - API `401 Unauthorized` responses clear local auth state and return the user to the login route.
 
 ## Testing
 
@@ -323,9 +331,11 @@ npm run test
 ```
 
 Coverage includes:
+- Login form behavior.
 - Registration form behavior.
 - Forgot/reset password form behavior.
 - Profile form behavior.
+- Task form validation behavior.
 - Header dropdown behavior.
 - Route rendering behavior for authenticated pages.
 - API service calls with MSW handlers (including profile update and task filtering behavior).

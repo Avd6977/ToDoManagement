@@ -5,16 +5,46 @@ export const ResetPasswordForm = (): JSX.Element => {
   const [resetToken, setResetToken] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [message, setMessage] = useState("");
-  const [error, setError] = useState("");
+  const [submitError, setSubmitError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [touched, setTouched] = useState({
+    resetToken: false,
+    newPassword: false,
+  });
+
+  const hasLetter = /[A-Za-z]/.test(newPassword);
+  const hasNumber = /[0-9]/.test(newPassword);
+  const hasSpecialCharacter = /[^A-Za-z0-9]/.test(newPassword);
+
+  const resetTokenError = touched.resetToken && !resetToken.trim() ? "Reset token is required." : "";
+  const newPasswordError = touched.newPassword
+    ? !newPassword.trim()
+      ? "New password is required."
+      : newPassword.length < 8
+        ? "Password must be at least 8 characters."
+        : !hasLetter
+          ? "Password must contain at least one letter."
+          : !hasNumber
+            ? "Password must contain at least one number."
+            : !hasSpecialCharacter
+              ? "Password must contain at least one special character."
+              : ""
+    : "";
+
+  const isFormValid = !!resetToken.trim()
+    && !!newPassword.trim()
+    && newPassword.length >= 8
+    && hasLetter
+    && hasNumber
+    && hasSpecialCharacter;
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
-    setError("");
+    setSubmitError("");
     setMessage("");
 
-    if (!resetToken.trim() || !newPassword.trim()) {
-      setError("Reset token and new password are required.");
+    if (!isFormValid) {
+      setTouched({ resetToken: true, newPassword: true });
       return;
     }
 
@@ -24,8 +54,9 @@ export const ResetPasswordForm = (): JSX.Element => {
       setMessage("Password reset successfully. You can now log in.");
       setResetToken("");
       setNewPassword("");
+      setTouched({ resetToken: false, newPassword: false });
     } catch (err: any) {
-      setError(err?.response?.data?.message ?? "Reset password request failed.");
+      setSubmitError(err?.response?.data?.message ?? "Reset password request failed.");
     } finally {
       setLoading(false);
     }
@@ -36,21 +67,34 @@ export const ResetPasswordForm = (): JSX.Element => {
       <h2>Reset Password</h2>
       <label>
         Reset Token
-        <input value={resetToken} onChange={(e) => setResetToken(e.target.value)} />
+        <input
+          value={resetToken}
+          onChange={(e) => {
+            setResetToken(e.target.value);
+            setSubmitError("");
+          }}
+          onBlur={() => setTouched((previous) => ({ ...previous, resetToken: true }))}
+        />
       </label>
+      {resetTokenError && <p className="error">{resetTokenError}</p>}
       <label>
         New Password
         <input
           type="password"
           minLength={8}
           value={newPassword}
-          onChange={(e) => setNewPassword(e.target.value)}
+          onChange={(e) => {
+            setNewPassword(e.target.value);
+            setSubmitError("");
+          }}
+          onBlur={() => setTouched((previous) => ({ ...previous, newPassword: true }))}
         />
       </label>
+      {newPasswordError && <p className="error">{newPasswordError}</p>}
       <p className="hint">Password must include at least 8 chars, 1 letter, 1 number, and 1 special character.</p>
       {message && <p className="hint">{message}</p>}
-      {error && <p className="error">{error}</p>}
-      <button type="submit" disabled={loading}>
+      {submitError && <p className="error">{submitError}</p>}
+      <button type="submit" disabled={loading || !isFormValid}>
         {loading ? "Resetting..." : "Reset Password"}
       </button>
     </form>

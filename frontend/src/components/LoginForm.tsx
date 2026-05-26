@@ -15,15 +15,23 @@ export const LoginForm = ({
 }: LoginFormProps): JSX.Element => {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
+  const [submitError, setSubmitError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [touched, setTouched] = useState({
+    username: false,
+    password: false,
+  });
+
+  const usernameError = touched.username && !username.trim() ? "Username is required." : "";
+  const passwordError = touched.password && !password.trim() ? "Password is required." : "";
+  const isFormValid = !!username.trim() && !!password.trim();
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
-    setError("");
+    setSubmitError("");
 
-    if (!username.trim() || !password.trim()) {
-      setError("Username and password are required.");
+    if (!isFormValid) {
+      setTouched({ username: true, password: true });
       return;
     }
 
@@ -32,7 +40,7 @@ export const LoginForm = ({
       const user = await login(username.trim(), password);
       onAuthenticated(user);
     } catch (err: any) {
-      setError(err?.response?.data?.message ?? "Login failed. Please try again.");
+      setSubmitError(err?.response?.data?.message ?? "Login failed. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -43,16 +51,29 @@ export const LoginForm = ({
       <h2>Login</h2>
       <label>
         Username
-        <input value={username} onChange={(e) => setUsername(e.target.value)} />
+        <input
+          value={username}
+          onChange={(e) => {
+            setUsername(e.target.value);
+            setSubmitError("");
+          }}
+          onBlur={() => setTouched((previous) => ({ ...previous, username: true }))}
+        />
       </label>
+      {usernameError && <p className="error">{usernameError}</p>}
       <label>
         Password
         <input
           type="password"
           value={password}
-          onChange={(e) => setPassword(e.target.value)}
+          onChange={(e) => {
+            setPassword(e.target.value);
+            setSubmitError("");
+          }}
+          onBlur={() => setTouched((previous) => ({ ...previous, password: true }))}
         />
       </label>
+      {passwordError && <p className="error">{passwordError}</p>}
       <div className="login-links">
         <button type="button" className="link-button" onClick={onRegisterClick}>
           Register
@@ -61,8 +82,8 @@ export const LoginForm = ({
           Forgot Password?
         </button>
       </div>
-      {error && <p className="error">{error}</p>}
-      <button type="submit" disabled={loading}>
+      {submitError && <p className="error">{submitError}</p>}
+      <button type="submit" disabled={loading || !isFormValid}>
         {loading ? "Signing in..." : "Login"}
       </button>
     </form>

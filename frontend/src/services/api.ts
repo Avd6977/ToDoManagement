@@ -19,6 +19,17 @@ apiClient.interceptors.request.use((config) => {
     return config;
 });
 
+apiClient.interceptors.response.use(
+    (response) => response,
+    (error: unknown) => {
+        if (axios.isAxiosError(error) && error.response?.status === 401) {
+            logout();
+            window.dispatchEvent(new Event('auth:unauthorized'));
+        }
+        return Promise.reject(error);
+    }
+);
+
 interface AuthResponse {
     id: string;
     fullName: string;

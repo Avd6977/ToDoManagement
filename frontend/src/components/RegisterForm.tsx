@@ -4,45 +4,55 @@ import { register } from "../services/api";
 
 interface RegisterFormProps {
   onAuthenticated: (user: User) => void;
+  onBackToLoginClick: () => void;
 }
 
-export const RegisterForm = ({ onAuthenticated }: RegisterFormProps): JSX.Element => {
+export const RegisterForm = ({ onAuthenticated, onBackToLoginClick }: RegisterFormProps): JSX.Element => {
   const [fullName, setFullName] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
+  const [submitError, setSubmitError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [touched, setTouched] = useState({
+    fullName: false,
+    username: false,
+    password: false,
+  });
 
   const hasLetter = /[A-Za-z]/.test(password);
   const hasNumber = /[0-9]/.test(password);
   const hasSpecialCharacter = /[^A-Za-z0-9]/.test(password);
 
+  const fullNameError = touched.fullName && !fullName.trim() ? "Full name is required." : "";
+  const usernameError = touched.username && !username.trim() ? "Username is required." : "";
+  const passwordError = touched.password
+    ? !password.trim()
+      ? "Password is required."
+      : password.length < 8
+        ? "Password must be at least 8 characters."
+        : !hasLetter
+          ? "Password must contain at least one letter."
+          : !hasNumber
+            ? "Password must contain at least one number."
+            : !hasSpecialCharacter
+              ? "Password must contain at least one special character."
+              : ""
+    : "";
+
+  const isFormValid = !!fullName.trim()
+    && !!username.trim()
+    && !!password.trim()
+    && password.length >= 8
+    && hasLetter
+    && hasNumber
+    && hasSpecialCharacter;
+
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
-    setError("");
+    setSubmitError("");
 
-    if (!fullName.trim() || !username.trim() || !password.trim()) {
-      setError("Full name, username, and password are required.");
-      return;
-    }
-
-    if (password.length < 8) {
-      setError("Password must be at least 8 characters.");
-      return;
-    }
-
-    if (!hasLetter) {
-      setError("Password must contain at least one letter.");
-      return;
-    }
-
-    if (!hasNumber) {
-      setError("Password must contain at least one number.");
-      return;
-    }
-
-    if (!hasSpecialCharacter) {
-      setError("Password must contain at least one special character.");
+    if (!isFormValid) {
+      setTouched({ fullName: true, username: true, password: true });
       return;
     }
 
@@ -51,7 +61,7 @@ export const RegisterForm = ({ onAuthenticated }: RegisterFormProps): JSX.Elemen
       const user = await register(fullName.trim(), username.trim(), password);
       onAuthenticated(user);
     } catch (err: any) {
-      setError(err?.response?.data?.message ?? "Registration failed. Please try again.");
+      setSubmitError(err?.response?.data?.message ?? "Registration failed. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -61,25 +71,49 @@ export const RegisterForm = ({ onAuthenticated }: RegisterFormProps): JSX.Elemen
     <form onSubmit={handleSubmit} className="card">
       <h2>Register</h2>
       <label>
-        Full Name
-        <input value={fullName} onChange={(e) => setFullName(e.target.value)} />
+        Full Name*
+        <input
+          value={fullName}
+          onChange={(e) => {
+            setFullName(e.target.value);
+            setSubmitError("");
+          }}
+          onBlur={() => setTouched((previous) => ({ ...previous, fullName: true }))}
+        />
       </label>
+      {fullNameError && <p className="error">{fullNameError}</p>}
       <label>
-        Username
-        <input value={username} onChange={(e) => setUsername(e.target.value)} />
+        Username*
+        <input
+          value={username}
+          onChange={(e) => {
+            setUsername(e.target.value);
+            setSubmitError("");
+          }}
+          onBlur={() => setTouched((previous) => ({ ...previous, username: true }))}
+        />
       </label>
+      {usernameError && <p className="error">{usernameError}</p>}
       <label>
-        Password
+        Password*
         <input
           type="password"
           minLength={8}
           value={password}
-          onChange={(e) => setPassword(e.target.value)}
+          onChange={(e) => {
+            setPassword(e.target.value);
+            setSubmitError("");
+          }}
+          onBlur={() => setTouched((previous) => ({ ...previous, password: true }))}
         />
       </label>
+      {passwordError && <p className="error">{passwordError}</p>}
       <p className="hint">Minimum 8 characters with at least 1 letter, 1 number, and 1 special character.</p>
-      {error && <p className="error">{error}</p>}
-      <button type="submit" disabled={loading}>
+      <button type="button" className="link-button" onClick={onBackToLoginClick}>
+        Back to Login
+      </button>
+      {submitError && <p className="error">{submitError}</p>}
+      <button type="submit" disabled={loading || !isFormValid}>
         {loading ? "Creating account..." : "Register"}
       </button>
     </form>

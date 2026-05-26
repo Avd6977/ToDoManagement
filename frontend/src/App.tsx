@@ -22,6 +22,13 @@ import {
 import type { Task } from "./types/Task";
 import type { User } from "./types/User";
 
+const toLocalDateInputValue = (date: Date): string => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
 const App = (): JSX.Element => {
   const [user, setUser] = useState<User | null>(getStoredUser());
   const [openTasks, setOpenTasks] = useState<Task[]>([]);
@@ -89,6 +96,20 @@ const App = (): JSX.Element => {
       void loadTasks("completed");
     }
   }, [isCompletedExpanded, completedTasks, user]);
+
+  useEffect(() => {
+    const handleUnauthorized = () => {
+      setUser(null);
+      setOpenTasks([]);
+      setCompletedTasks(null);
+      setIsCompletedExpanded(false);
+      setSearchTerm("");
+      navigate("/");
+    };
+
+    window.addEventListener("auth:unauthorized", handleUnauthorized);
+    return () => window.removeEventListener("auth:unauthorized", handleUnauthorized);
+  }, [navigate]);
 
   const handleCreate = async (task: Partial<Task>) => {
     await createTask(task);
@@ -172,7 +193,10 @@ const App = (): JSX.Element => {
             <main className="auth-layout">
               <h1>ToDo Management</h1>
               <p className="subtitle">Create your account.</p>
-              <RegisterForm onAuthenticated={setUser} />
+              <RegisterForm
+                onAuthenticated={setUser}
+                onBackToLoginClick={() => navigate("/")}
+              />
             </main>
           )}
         />
@@ -296,7 +320,11 @@ const App = (): JSX.Element => {
               onBack={() => navigate("/tasks")}
             />
 
-            <TaskForm submitLabel="Create Task" onSubmit={handleCreate} />
+            <TaskForm
+              submitLabel="Create Task"
+              onSubmit={handleCreate}
+              minDueDate={toLocalDateInputValue(new Date())}
+            />
           </main>
         )}
       />

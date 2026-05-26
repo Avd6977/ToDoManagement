@@ -136,6 +136,13 @@ public sealed class TasksController : ControllerBase
         }
 
         var nowUtc = _dateTimeService.UtcNow;
+        if (IsDueDateChanged(task.DueDate, request.DueDate)
+            && request.DueDate.HasValue
+            && request.DueDate.Value.Date < nowUtc.Date)
+        {
+            return BadRequest(new { message = "Due date cannot be changed to a past date." });
+        }
+
         AddHistory(task, nowUtc, "UPDATE");
 
         task.Title = request.Title.Trim();
@@ -191,6 +198,21 @@ public sealed class TasksController : ControllerBase
         CreatedDateUtc = task.CreatedDateUtc,
         UpdatedDateUtc = task.UpdatedDateUtc
     };
+
+    private static bool IsDueDateChanged(DateTime? existingDueDate, DateTime? requestedDueDate)
+    {
+        if (!existingDueDate.HasValue && !requestedDueDate.HasValue)
+        {
+            return false;
+        }
+
+        if (!existingDueDate.HasValue || !requestedDueDate.HasValue)
+        {
+            return true;
+        }
+
+        return existingDueDate.Value.Date != requestedDueDate.Value.Date;
+    }
 
     private void AddHistory(TaskItem task, DateTime validToUtc, string operation)
     {
