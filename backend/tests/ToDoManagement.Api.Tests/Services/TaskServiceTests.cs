@@ -36,7 +36,7 @@ public sealed class TaskServiceTests
         using var scope = new AssertionScope();
         result.IsSuccess.Should().BeFalse();
         result.StatusCode.Should().Be(400);
-        result.Message.Should().Be("Invalid status filter. Use open, completed, or all.");
+        result.Message.Should().Be("Invalid status filter. Use open, completed, overdue, or all.");
     }
 
     [Fact]
@@ -53,7 +53,7 @@ public sealed class TaskServiceTests
         using var scope = new AssertionScope();
         result.IsSuccess.Should().BeFalse();
         result.StatusCode.Should().Be(400);
-        result.Message.Should().Be("Invalid sort option. Use alphabetical or recentlyAdded.");
+        result.Message.Should().Be("Invalid sort option. Use alphabetical, dueDate, or recentlyAdded.");
     }
 
     [Fact]
@@ -126,7 +126,6 @@ public sealed class TaskServiceTests
         dbContext.Tasks.Add(new TaskItem
         {
             Id = taskId,
-            Title = "Task",
             Description = "To delete",
             OwnerId = userId,
             IsCompleted = false,
@@ -181,7 +180,6 @@ public sealed class TaskServiceTests
             new TaskItem
             {
                 Id = ownTaskId,
-                Title = "Owner task",
                 Description = "Visible to owner",
                 OwnerId = userId,
                 IsCompleted = false,
@@ -191,7 +189,6 @@ public sealed class TaskServiceTests
             new TaskItem
             {
                 Id = otherUserTaskId,
-                Title = "Other task",
                 Description = "Must not be visible",
                 OwnerId = otherUserId,
                 IsCompleted = false,
@@ -241,8 +238,7 @@ public sealed class TaskServiceTests
             dbContext.Tasks.Add(new TaskItem
             {
                 Id = Guid.NewGuid(),
-                Title = $"Task {index}",
-                Description = "Paged task",
+                Description = $"Paged task {index}",
                 OwnerId = userId,
                 IsCompleted = false,
                 CreatedDateUtc = now.AddMinutes(-index),
@@ -288,8 +284,7 @@ public sealed class TaskServiceTests
             new TaskItem
             {
                 Id = Guid.NewGuid(),
-                Title = "Zulu",
-                Description = "Task z",
+                Description = "Zulu task",
                 OwnerId = userId,
                 IsCompleted = false,
                 CreatedDateUtc = FixedNowUtc.AddMinutes(-1),
@@ -298,8 +293,7 @@ public sealed class TaskServiceTests
             new TaskItem
             {
                 Id = Guid.NewGuid(),
-                Title = "Alpha",
-                Description = "Task a",
+                Description = "Alpha task",
                 OwnerId = userId,
                 IsCompleted = false,
                 CreatedDateUtc = FixedNowUtc.AddMinutes(-2),
@@ -316,7 +310,7 @@ public sealed class TaskServiceTests
         using var scope = new AssertionScope();
         result.IsSuccess.Should().BeTrue();
         result.Value.Should().NotBeNull();
-        result.Value!.Items.Select(x => x.Title).Should().ContainInOrder("Alpha", "Zulu");
+        result.Value!.Items.Select(x => x.Description).Should().ContainInOrder("Alpha task", "Zulu task");
     }
 
     [Fact]
@@ -341,7 +335,6 @@ public sealed class TaskServiceTests
             new TaskItem
             {
                 Id = olderTaskId,
-                Title = "Older",
                 Description = "Older task",
                 OwnerId = userId,
                 IsCompleted = false,
@@ -351,7 +344,6 @@ public sealed class TaskServiceTests
             new TaskItem
             {
                 Id = newerTaskId,
-                Title = "Newer",
                 Description = "Newer task",
                 OwnerId = userId,
                 IsCompleted = false,
@@ -391,8 +383,7 @@ public sealed class TaskServiceTests
             new TaskItem
             {
                 Id = Guid.NewGuid(),
-                Title = "Alpha",
-                Description = "Task a",
+                Description = "Alpha task",
                 OwnerId = userId,
                 IsCompleted = false,
                 CreatedDateUtc = FixedNowUtc,
@@ -401,8 +392,7 @@ public sealed class TaskServiceTests
             new TaskItem
             {
                 Id = Guid.NewGuid(),
-                Title = "Zulu",
-                Description = "Task z",
+                Description = "Zulu task",
                 OwnerId = userId,
                 IsCompleted = false,
                 CreatedDateUtc = FixedNowUtc.AddMinutes(-1),
@@ -419,7 +409,169 @@ public sealed class TaskServiceTests
         using var scope = new AssertionScope();
         result.IsSuccess.Should().BeTrue();
         result.Value.Should().NotBeNull();
-        result.Value!.Items.Select(x => x.Title).Should().ContainInOrder("Zulu", "Alpha");
+        result.Value!.Items.Select(x => x.Description).Should().ContainInOrder("Zulu task", "Alpha task");
+    }
+
+    [Fact]
+    public async Task GetTasksAsync_Should_FilterOnlyOverdueTasks_WhenRequested()
+    {
+        // ARRANGE
+        await using var dbContext = await CreateDbContextAsync();
+        var userId = Guid.NewGuid();
+
+        dbContext.Users.Add(new User
+        {
+            Id = userId,
+            FullName = "Overdue User",
+            Username = "overdue-user",
+            PasswordHash = "hash"
+        });
+
+        dbContext.Tasks.AddRange(
+            new TaskItem
+            {
+                Id = Guid.NewGuid(),
+                Description = "Should be included",
+                OwnerId = userId,
+                IsCompleted = false,
+                DueDate = FixedNowUtc.Date.AddDays(-1),
+                CreatedDateUtc = FixedNowUtc.AddDays(-3),
+                UpdatedDateUtc = FixedNowUtc.AddDays(-3)
+            },
+            new TaskItem
+            {
+                Id = Guid.NewGuid(),
+                Description = "Should be excluded",
+                OwnerId = userId,
+                IsCompleted = false,
+                DueDate = FixedNowUtc.Date.AddDays(2),
+                CreatedDateUtc = FixedNowUtc.AddDays(-2),
+                UpdatedDateUtc = FixedNowUtc.AddDays(-2)
+            },
+            new TaskItem
+            {
+                Id = Guid.NewGuid(),
+                Description = "Should be excluded",
+                OwnerId = userId,
+                IsCompleted = true,
+                DueDate = FixedNowUtc.Date.AddDays(-2),
+                CreatedDateUtc = FixedNowUtc.AddDays(-1),
+                UpdatedDateUtc = FixedNowUtc.AddDays(-1)
+            });
+
+        await dbContext.SaveChangesAsync();
+        var service = new TaskService(dbContext, _dateTimeServiceMock.Object);
+
+        // ACT
+        var result = await service.GetTasksAsync(userId, null, "overdue", "recentlyAdded", "asc", 1, 25, CancellationToken.None);
+
+        // ASSERT
+        using var scope = new AssertionScope();
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().NotBeNull();
+        result.Value!.Items.Should().HaveCount(1);
+        result.Value.Items.Single().Description.Should().Be("Should be included");
+    }
+
+    [Fact]
+    public async Task GetTasksAsync_Should_SortByDueDateAscending_WhenRequested()
+    {
+        // ARRANGE
+        await using var dbContext = await CreateDbContextAsync();
+        var userId = Guid.NewGuid();
+
+        dbContext.Users.Add(new User
+        {
+            Id = userId,
+            FullName = "Due Date Sort User",
+            Username = "due-date-user",
+            PasswordHash = "hash"
+        });
+
+        dbContext.Tasks.AddRange(
+            new TaskItem
+            {
+                Id = Guid.NewGuid(),
+                Description = "Task 1",
+                OwnerId = userId,
+                IsCompleted = false,
+                DueDate = FixedNowUtc.Date.AddDays(3),
+                CreatedDateUtc = FixedNowUtc.AddDays(-2),
+                UpdatedDateUtc = FixedNowUtc.AddDays(-2)
+            },
+            new TaskItem
+            {
+                Id = Guid.NewGuid(),
+                Description = "Task 2",
+                OwnerId = userId,
+                IsCompleted = false,
+                DueDate = FixedNowUtc.Date.AddDays(1),
+                CreatedDateUtc = FixedNowUtc.AddDays(-1),
+                UpdatedDateUtc = FixedNowUtc.AddDays(-1)
+            });
+
+        await dbContext.SaveChangesAsync();
+        var service = new TaskService(dbContext, _dateTimeServiceMock.Object);
+
+        // ACT
+        var result = await service.GetTasksAsync(userId, null, "open", "dueDate", "asc", 1, 25, CancellationToken.None);
+
+        // ASSERT
+        using var scope = new AssertionScope();
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().NotBeNull();
+        result.Value!.Items.Select(x => x.Description).Should().ContainInOrder("Task 2", "Task 1");
+
+    }
+
+    [Fact]
+    public async Task GetTasksAsync_Should_UseRecentlyAddedAsTieBreaker_ForAlphabeticalSort()
+    {
+        // ARRANGE
+        await using var dbContext = await CreateDbContextAsync();
+        var userId = Guid.NewGuid();
+        var newerTaskId = Guid.NewGuid();
+        var olderTaskId = Guid.NewGuid();
+
+        dbContext.Users.Add(new User
+        {
+            Id = userId,
+            FullName = "Tie Break User",
+            Username = "tie-break-user",
+            PasswordHash = "hash"
+        });
+
+        dbContext.Tasks.AddRange(
+            new TaskItem
+            {
+                Id = olderTaskId,
+                Description = "Same description",
+                OwnerId = userId,
+                IsCompleted = false,
+                CreatedDateUtc = FixedNowUtc.AddMinutes(-2),
+                UpdatedDateUtc = FixedNowUtc.AddMinutes(-2)
+            },
+            new TaskItem
+            {
+                Id = newerTaskId,
+                Description = "Same description",
+                OwnerId = userId,
+                IsCompleted = false,
+                CreatedDateUtc = FixedNowUtc.AddMinutes(-1),
+                UpdatedDateUtc = FixedNowUtc.AddMinutes(-1)
+            });
+
+        await dbContext.SaveChangesAsync();
+        var service = new TaskService(dbContext, _dateTimeServiceMock.Object);
+
+        // ACT
+        var result = await service.GetTasksAsync(userId, null, "open", "alphabetical", "asc", 1, 25, CancellationToken.None);
+
+        // ASSERT
+        using var scope = new AssertionScope();
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().NotBeNull();
+        result.Value!.Items.Select(x => x.Id).Should().ContainInOrder(newerTaskId, olderTaskId);
     }
 
     private static async Task<AppDbContext> CreateDbContextAsync()

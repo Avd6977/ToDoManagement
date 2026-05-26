@@ -86,10 +86,10 @@ npm run test
 - Passwords are stored at rest as salted PBKDF2 (SHA-256) hashes, never plaintext.
 - Authenticated task CRUD scoped to the logged-in user.
 - Task filtering via `GET /api/tasks` query parameters:
-  - `search` (matches title/description)
-  - `status` (`open`, `completed`, or `all`)
+  - `search` (matches description)
+  - `status` (`open`, `completed`, `overdue`, or `all`)
 - Task sorting via `GET /api/tasks` query parameter:
-  - `sort` (`alphabetical` or `recentlyAdded`; default: `recentlyAdded`)
+  - `sort` (`alphabetical`, `dueDate`, or `recentlyAdded`; default: `recentlyAdded`)
   - `sortDirection` (`asc` or `desc`; default: `asc`)
 - Task pagination via `GET /api/tasks` query parameters:
   - `page` (default: `1`)
@@ -216,23 +216,23 @@ All endpoints require authenticated session (Bearer token or cookie-authenticate
   - Returns tasks for the current authenticated user only.
   - Optional query params:
     - `search`: filters by title/description
-    - `status`: `open`, `completed`, or `all`
-    - `sort`: `alphabetical` or `recentlyAdded` (default `recentlyAdded`)
+    - `status`: `open`, `completed`, `overdue`, or `all`
+    - `sort`: `alphabetical`, `dueDate`, or `recentlyAdded` (default `recentlyAdded`)
     - `sortDirection`: `asc` or `desc` (default `asc`)
     - `page`: 1-based page number (default `1`)
     - `pageSize`: `25`, `50`, or `100` (default `25`)
   - Response shape:
     - `PagedResponse<TaskResponse>`: `{ items, page, pageSize, totalCount, totalPages }`
 - `POST /api/tasks`
-  - Body: `{ title, description, dueDate? }`
+  - Body: `{ description, dueDate? }`
   - The task is always tied to the current authenticated user.
 - `PUT /api/tasks/{id}`
   - Current authenticated user only.
-  - Body: `{ title, description, dueDate?, isCompleted }`
+  - Body: `{ description, dueDate?, isCompleted }`
 - `DELETE /api/tasks/{id}`
   - Current authenticated user only.
 
-Task item payloads include: `{ id, title, description, dueDate, isCompleted, createdDateUtc, updatedDateUtc }`.
+Task item payloads include: `{ id, description, dueDate, isCompleted, createdDateUtc, updatedDateUtc }`.
 
 ## Profile Endpoint
 
@@ -263,8 +263,10 @@ All endpoints require authenticated session (Bearer token or cookie-authenticate
 - Task due date UX:
   - Create and edit date pickers use a min date of today to prevent selecting past dates.
   - Edit flow allows updates when an existing past due date is unchanged, but blocks changes to a new past date.
-- Task list includes sorting controls for `Recently Added` and `Alphabetical`.
-- Selecting `Alphabetical` again toggles direction between `A-Z` and `Z-A`.
+- Task list includes a sort icon dropdown with controls for:
+  - Sort options: `Recently Added`, `Alphabetical`, and `Due Date`
+  - Sort direction: `Ascending` and `Descending`
+  - Filter option: `Overdue Only`
 - Global auth guard:
   - API `401 Unauthorized` responses clear local auth state and return the user to the login route.
 

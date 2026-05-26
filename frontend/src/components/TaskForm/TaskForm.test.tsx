@@ -42,7 +42,6 @@ describe('TaskForm', () => {
             />
         );
 
-        await user.type(screen.getByLabelText(/^Title/), 'Task with invalid due date');
         await user.type(screen.getByLabelText(/^Description/), 'Description');
         await user.type(screen.getByLabelText('Due Date'), yesterdayValue);
         await user.click(screen.getByRole('button', { name: 'Create Task' }));
@@ -69,7 +68,6 @@ describe('TaskForm', () => {
                 onSubmit={onSubmit}
                 enforceNoPastDueDateChanges
                 initialValue={{
-                    title: 'Task edit',
                     description: 'Description',
                     dueDate: new Date(`${tomorrowValue}T00:00:00`).toISOString()
                 }}
@@ -100,7 +98,6 @@ describe('TaskForm', () => {
                 onSubmit={onSubmit}
                 enforceNoPastDueDateChanges
                 initialValue={{
-                    title: 'Task edit',
                     description: 'Description',
                     dueDate: new Date(`${yesterdayValue}T00:00:00`).toISOString()
                 }}
@@ -123,7 +120,6 @@ describe('TaskForm', () => {
 
         render(<TaskForm submitLabel="Save Changes" onSubmit={onSubmit} />);
 
-        await user.type(screen.getByLabelText(/^Title/), 'Task edit');
         await user.type(screen.getByLabelText(/^Description/), 'Description');
         await user.type(screen.getByLabelText(/^Due Date/), yesterdayValue);
         await user.click(screen.getByRole('button', { name: 'Save Changes' }));

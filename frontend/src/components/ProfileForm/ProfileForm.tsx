@@ -1,5 +1,5 @@
 import { FormEvent, useState } from "react";
-import type { User } from "../types/User";
+import type { User } from "../../types/User";
 
 const FULL_NAME_MAX_LENGTH = 100;
 const EMAIL_MAX_LENGTH = 254;
@@ -20,7 +20,6 @@ export const ProfileForm = ({ user, onSave, onCancel }: ProfileFormProps): JSX.E
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [message, setMessage] = useState("");
-  const [submitError, setSubmitError] = useState("");
   const [loading, setLoading] = useState(false);
   const [touched, setTouched] = useState({
     fullName: false,
@@ -44,7 +43,6 @@ export const ProfileForm = ({ user, onSave, onCancel }: ProfileFormProps): JSX.E
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
-    setSubmitError("");
     setMessage("");
 
     if (!isFormValid) {
@@ -67,8 +65,7 @@ export const ProfileForm = ({ user, onSave, onCancel }: ProfileFormProps): JSX.E
       setCurrentPassword("");
       setNewPassword("");
       setTouched((previous) => ({ ...previous, currentPassword: false, newPassword: false }));
-    } catch (err: any) {
-      setSubmitError(err?.response?.data?.message ?? "Unable to update profile.");
+    } catch {
     } finally {
       setLoading(false);
     }
@@ -85,7 +82,6 @@ export const ProfileForm = ({ user, onSave, onCancel }: ProfileFormProps): JSX.E
             maxLength={FULL_NAME_MAX_LENGTH}
             onChange={(event) => {
               setFullName(event.target.value);
-              setSubmitError("");
             }}
             onBlur={() => setTouched((previous) => ({ ...previous, fullName: true }))}
           />
@@ -114,7 +110,6 @@ export const ProfileForm = ({ user, onSave, onCancel }: ProfileFormProps): JSX.E
             value={currentPassword}
             onChange={(event) => {
               setCurrentPassword(event.target.value);
-              setSubmitError("");
             }}
             onBlur={() => setTouched((previous) => ({ ...previous, currentPassword: true }))}
             placeholder="Required only when changing password"
@@ -129,7 +124,6 @@ export const ProfileForm = ({ user, onSave, onCancel }: ProfileFormProps): JSX.E
             value={newPassword}
             onChange={(event) => {
               setNewPassword(event.target.value);
-              setSubmitError("");
             }}
             onBlur={() => setTouched((previous) => ({ ...previous, newPassword: true }))}
             placeholder="Leave blank to keep current password"
@@ -137,7 +131,6 @@ export const ProfileForm = ({ user, onSave, onCancel }: ProfileFormProps): JSX.E
         </label>
 
         {message && <p className="hint">{message}</p>}
-        {submitError && <p className="error">{submitError}</p>}
       </div>
 
       <div className="form-footer">

@@ -57,7 +57,6 @@ public sealed class TasksControllerDueDateUpdateTests
         dbContext.Tasks.Add(new TaskItem
         {
             Id = taskId,
-            Title = "Original title",
             Description = "Original description",
             DueDate = originalPastDueDate,
             IsCompleted = false,
@@ -70,7 +69,6 @@ public sealed class TasksControllerDueDateUpdateTests
         var controller = CreateController(dbContext, ownerId);
         var request = new UpdateTaskRequest
         {
-            Title = "Updated title",
             Description = "Updated description",
             DueDate = originalPastDueDate,
             IsCompleted = false
@@ -84,7 +82,7 @@ public sealed class TasksControllerDueDateUpdateTests
         result.Result.Should().BeOfType<OkObjectResult>();
 
         var updatedTask = await dbContext.Tasks.SingleAsync(t => t.Id == taskId);
-        updatedTask.Title.Should().Be("Updated title");
+        updatedTask.Description.Should().Be("Updated description");
         updatedTask.DueDate.Should().Be(originalPastDueDate);
     }
 
@@ -117,7 +115,6 @@ public sealed class TasksControllerDueDateUpdateTests
         dbContext.Tasks.Add(new TaskItem
         {
             Id = taskId,
-            Title = "Original title",
             Description = "Original description",
             DueDate = null,
             IsCompleted = false,
@@ -130,7 +127,6 @@ public sealed class TasksControllerDueDateUpdateTests
         var controller = CreateController(dbContext, ownerId);
         var request = new UpdateTaskRequest
         {
-            Title = "Updated title",
             Description = "Updated description",
             DueDate = FixedNowUtc.Date.AddDays(-1),
             IsCompleted = false
@@ -177,7 +173,6 @@ public sealed class TasksControllerDueDateUpdateTests
         dbContext.Tasks.Add(new TaskItem
         {
             Id = taskId,
-            Title = "Original title",
             Description = "Original description",
             DueDate = null,
             IsCompleted = false,
@@ -190,7 +185,6 @@ public sealed class TasksControllerDueDateUpdateTests
         var controller = CreateController(dbContext, ownerId);
         var request = new UpdateTaskRequest
         {
-            Title = "Updated title",
             Description = "Updated description",
             DueDate = futureDueDate,
             IsCompleted = false

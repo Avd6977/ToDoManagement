@@ -58,7 +58,6 @@ public sealed class TasksControllerTests
                 new TaskResponse
                 {
                     Id = Guid.NewGuid(),
-                    Title = "Alpha",
                     Description = "Task",
                     IsCompleted = false,
                     OwnerId = userId,

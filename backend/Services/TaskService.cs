@@ -29,13 +29,13 @@ public sealed class TaskService : ITaskService
         var normalizedStatus = ParseStatus(status);
         if (normalizedStatus is null)
         {
-            return ServiceResult<PagedResponse<TaskResponse>>.Failure(StatusCodes.Status400BadRequest, "Invalid status filter. Use open, completed, or all.");
+            return ServiceResult<PagedResponse<TaskResponse>>.Failure(StatusCodes.Status400BadRequest, "Invalid status filter. Use open, completed, overdue, or all.");
         }
 
         var normalizedSort = ParseSort(sort);
         if (normalizedSort is null)
         {
-            return ServiceResult<PagedResponse<TaskResponse>>.Failure(StatusCodes.Status400BadRequest, "Invalid sort option. Use alphabetical or recentlyAdded.");
+            return ServiceResult<PagedResponse<TaskResponse>>.Failure(StatusCodes.Status400BadRequest, "Invalid sort option. Use alphabetical, dueDate, or recentlyAdded.");
         }
 
         var normalizedSortDirection = ParseSortDirection(sortDirection);
@@ -66,14 +66,17 @@ public sealed class TaskService : ITaskService
         {
             query = query.Where(t => t.IsCompleted);
         }
+        else if (normalizedStatus == TaskFilterStatus.Overdue)
+        {
+            var today = _dateTimeService.UtcNow.Date;
+            query = query.Where(t => !t.IsCompleted && t.DueDate.HasValue && t.DueDate.Value.Date < today);
+        }
 
         var normalizedSearch = (search ?? string.Empty).Trim();
         if (!string.IsNullOrWhiteSpace(normalizedSearch))
         {
             var loweredSearch = normalizedSearch.ToLowerInvariant();
-            query = query.Where(t =>
-                t.Title.ToLower().Contains(loweredSearch)
-                || t.Description.ToLower().Contains(loweredSearch));
+            query = query.Where(t => t.Description.ToLower().Contains(loweredSearch));
         }
 
         var totalCount = await query.CountAsync(cancellationToken);
@@ -81,13 +84,21 @@ public sealed class TaskService : ITaskService
         var sortedQuery = normalizedSort switch
         {
             TaskSortOption.Alphabetical when normalizedSortDirection == TaskSortDirection.Desc
-                => query.OrderByDescending(t => t.Title).ThenByDescending(t => t.CreatedDateUtc),
+                => query.OrderByDescending(t => t.Description).ThenByDescending(t => t.CreatedDateUtc),
             TaskSortOption.Alphabetical
-                => query.OrderBy(t => t.Title).ThenByDescending(t => t.CreatedDateUtc),
+                => query.OrderBy(t => t.Description).ThenByDescending(t => t.CreatedDateUtc),
+            TaskSortOption.DueDate when normalizedSortDirection == TaskSortDirection.Desc
+                => query.OrderByDescending(t => t.DueDate.HasValue)
+                    .ThenByDescending(t => t.DueDate)
+                    .ThenByDescending(t => t.CreatedDateUtc),
+            TaskSortOption.DueDate
+                => query.OrderByDescending(t => t.DueDate.HasValue)
+                    .ThenBy(t => t.DueDate)
+                    .ThenByDescending(t => t.CreatedDateUtc),
             _ when normalizedSortDirection == TaskSortDirection.Desc
-                => query.OrderBy(t => t.CreatedDateUtc).ThenBy(t => t.Title),
+                => query.OrderBy(t => t.CreatedDateUtc).ThenBy(t => t.Description),
             _
-                => query.OrderByDescending(t => t.CreatedDateUtc).ThenBy(t => t.Title)
+                => query.OrderByDescending(t => t.CreatedDateUtc).ThenBy(t => t.Description)
         };
 
         var tasks = await sortedQuery
@@ -96,7 +107,6 @@ public sealed class TaskService : ITaskService
             .Select(t => new TaskResponse
             {
                 Id = t.Id,
-                Title = t.Title,
                 Description = t.Description,
                 DueDate = t.DueDate,
                 IsCompleted = t.IsCompleted,
@@ -127,7 +137,6 @@ public sealed class TaskService : ITaskService
         var task = new TaskItem
         {
             Id = Guid.NewGuid(),
-            Title = request.Title.Trim(),
             Description = request.Description.Trim(),
             DueDate = request.DueDate,
             IsCompleted = false,
@@ -166,7 +175,6 @@ public sealed class TaskService : ITaskService
         // This is only needed for SQL Lite. SQL Server Temporal Tables would handle this automatically.
         AddHistory(task, nowUtc, "UPDATE");
 
-        task.Title = request.Title.Trim();
         task.Description = request.Description.Trim();
         task.DueDate = request.DueDate;
         task.IsCompleted = request.IsCompleted;
@@ -198,7 +206,6 @@ public sealed class TaskService : ITaskService
     private static TaskResponse Map(TaskItem task) => new()
     {
         Id = task.Id,
-        Title = task.Title,
         Description = task.Description,
         DueDate = task.DueDate,
         IsCompleted = task.IsCompleted,
@@ -234,6 +241,7 @@ public sealed class TaskService : ITaskService
         {
             "open" => TaskFilterStatus.Open,
             "completed" => TaskFilterStatus.Completed,
+            "overdue" => TaskFilterStatus.Overdue,
             "all" => TaskFilterStatus.All,
             _ => null
         };
@@ -250,6 +258,7 @@ public sealed class TaskService : ITaskService
         return normalized switch
         {
             "alphabetical" => TaskSortOption.Alphabetical,
+            "duedate" => TaskSortOption.DueDate,
             "recentlyadded" => TaskSortOption.RecentlyAdded,
             _ => null
         };
@@ -287,7 +296,6 @@ public sealed class TaskService : ITaskService
         {
             Id = Guid.NewGuid(),
             TaskId = task.Id,
-            Title = task.Title,
             Description = task.Description,
             DueDate = task.DueDate,
             IsCompleted = task.IsCompleted,

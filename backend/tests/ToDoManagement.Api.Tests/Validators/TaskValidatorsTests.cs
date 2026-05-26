@@ -32,7 +32,6 @@ public sealed class TaskValidatorsTests
         // ARRANGE
         var request = new CreateTaskRequest
         {
-            Title = "Task title",
             Description = "Task description",
             DueDate = FixedNowUtc.Date.AddDays(dueDateOffsetDays)
         };
@@ -60,7 +59,6 @@ public sealed class TaskValidatorsTests
         // ARRANGE
         var request = new UpdateTaskRequest
         {
-            Title = "Task title",
             Description = "Task description",
             DueDate = FixedNowUtc.Date.AddDays(dueDateOffsetDays),
             IsCompleted = false
@@ -82,7 +80,6 @@ public sealed class TaskValidatorsTests
         // ARRANGE
         var request = new CreateTaskRequest
         {
-            Title = "Task title",
             Description = new string('a', descriptionLength),
             DueDate = FixedNowUtc.Date
         };
@@ -108,7 +105,6 @@ public sealed class TaskValidatorsTests
         // ARRANGE
         var request = new UpdateTaskRequest
         {
-            Title = "Task title",
             Description = new string('a', descriptionLength),
             DueDate = FixedNowUtc.Date,
             IsCompleted = false
@@ -125,6 +121,28 @@ public sealed class TaskValidatorsTests
             result.Errors.Select(e => e.ErrorMessage)
                 .Should().Contain("Description must be 2000 characters or fewer.");
         }
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void CreateTaskRequestValidator_Should_RequireDescription(string description)
+    {
+        // ARRANGE
+        var request = new CreateTaskRequest
+        {
+            Description = description,
+            DueDate = FixedNowUtc.Date
+        };
+
+        // ACT
+        var result = _createTaskRequestValidator.Validate(request);
+
+        // ASSERT
+        using var scope = new AssertionScope();
+        result.IsValid.Should().BeFalse();
+        result.Errors.Select(e => e.ErrorMessage)
+            .Should().Contain("Description is required.");
     }
 
 }

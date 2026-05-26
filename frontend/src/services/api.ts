@@ -1,6 +1,10 @@
 import axios from 'axios';
 import type { Task } from '../types/Task';
 import type { User } from '../types/User';
+import {
+    getApiErrorMessage,
+    toasterMessageService
+} from './toasterMessageService';
 
 const API_BASE_URL = 'http://localhost:5000/api';
 const TOKEN_KEY = 'todo_jwt';
@@ -22,6 +26,10 @@ apiClient.interceptors.request.use((config) => {
 apiClient.interceptors.response.use(
     (response) => response,
     (error: unknown) => {
+        toasterMessageService.showError(
+            getApiErrorMessage(error, 'Request failed. Please try again.')
+        );
+
         if (axios.isAxiosError(error) && error.response?.status === 401) {
             logout();
             window.dispatchEvent(new Event('auth:unauthorized'));
@@ -50,8 +58,8 @@ interface ProfileResponse {
     email: string;
 }
 
-export type TaskStatusFilter = 'open' | 'completed' | 'all';
-export type TaskSortOption = 'recentlyAdded' | 'alphabetical';
+export type TaskStatusFilter = 'open' | 'completed' | 'overdue' | 'all';
+export type TaskSortOption = 'recentlyAdded' | 'alphabetical' | 'dueDate';
 export type SortDirection = 'asc' | 'desc';
 
 interface PagedResponse<T> {
@@ -62,9 +70,13 @@ interface PagedResponse<T> {
     totalPages: number;
 }
 
+export interface PagedTaskResponse extends PagedResponse<Task> {}
+
 interface GetTasksParams {
     search?: string;
     status?: TaskStatusFilter;
+    page?: number;
+    pageSize?: number;
     sort?: TaskSortOption;
     sortDirection?: SortDirection;
 }
@@ -141,16 +153,20 @@ export const updateProfile = async (
     };
 };
 
-export const getTasks = async (params?: GetTasksParams): Promise<Task[]> => {
+export const getTasks = async (
+    params?: GetTasksParams
+): Promise<PagedTaskResponse> => {
     const response = await apiClient.get<PagedResponse<Task>>('/tasks', {
         params: {
             search: params?.search?.trim() || undefined,
             status: params?.status ?? 'all',
+            page: params?.page,
+            pageSize: params?.pageSize,
             sort: params?.sort ?? 'recentlyAdded',
             sortDirection: params?.sortDirection ?? 'asc'
         }
     });
-    return response.data.items;
+    return response.data;
 };
 
 export const createTask = async (task: Partial<Task>): Promise<Task> => {

@@ -1,8 +1,7 @@
 import { FormEvent, useState } from "react";
-import type { Task } from "../types/Task";
+import type { Task } from "../../types/Task";
 
 const TASK_DESCRIPTION_MAX_LENGTH = 2000;
-const TASK_TITLE_MAX_LENGTH = 200;
 
 interface TaskFormProps {
   onSubmit: (task: Partial<Task>) => Promise<void>;
@@ -36,27 +35,16 @@ export const TaskForm = ({
   minDueDate,
   enforceNoPastDueDateChanges = false,
 }: TaskFormProps): JSX.Element => {
-  const [title, setTitle] = useState(initialValue?.title ?? "");
   const [description, setDescription] = useState(initialValue?.description ?? "");
   const [dueDate, setDueDate] = useState(toDateInputValue(initialValue?.dueDate));
-  const [submitError, setSubmitError] = useState("");
   const [loading, setLoading] = useState(false);
   const [touched, setTouched] = useState({
-    title: false,
     description: false,
     dueDate: false,
   });
 
   const todayDateValue = toLocalDateInputValue(new Date());
   const initialDueDateValue = toDateInputValue(initialValue?.dueDate);
-  const titleTooLong = title.length > TASK_TITLE_MAX_LENGTH;
-  const titleError = touched.title
-    ? !title.trim()
-      ? "Title is required."
-      : titleTooLong
-        ? `Title must be ${TASK_TITLE_MAX_LENGTH} characters or fewer.`
-        : ""
-    : "";
   const descriptionTooLong = description.length > TASK_DESCRIPTION_MAX_LENGTH;
   const descriptionError = touched.description
     ? !description.trim()
@@ -90,30 +78,26 @@ export const TaskForm = ({
     )
   );
 
-  const isFormValid = !!title.trim() && !titleTooLong && !!description.trim() && !descriptionTooLong && !hasInvalidDueDate;
+  const isFormValid = !!description.trim() && !descriptionTooLong && !hasInvalidDueDate;
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
-    setSubmitError("");
 
     if (!isFormValid) {
-      setTouched({ title: true, description: true, dueDate: true });
+      setTouched({ description: true, dueDate: true });
       return;
     }
 
     try {
       setLoading(true);
       await onSubmit({
-        title: title.trim(),
         description: description.trim(),
         dueDate: dueDate ? new Date(`${dueDate}T00:00:00`).toISOString() : null,
       });
-      setTitle("");
       setDescription("");
       setDueDate("");
-      setTouched({ title: false, description: false, dueDate: false });
-    } catch (err: any) {
-      setSubmitError(err?.response?.data?.message ?? "Task request failed.");
+      setTouched({ description: false, dueDate: false });
+    } catch {
     } finally {
       setLoading(false);
     }
@@ -124,30 +108,12 @@ export const TaskForm = ({
       <div className="form-content">
         <h3>{submitLabel}</h3>
         <label>
-          Title*
-          <input
-            value={title}
-            maxLength={TASK_TITLE_MAX_LENGTH}
-            onChange={(e) => {
-              setTitle(e.target.value);
-              setSubmitError("");
-            }}
-            onBlur={() => setTouched((previous) => ({ ...previous, title: true }))}
-            required
-          />
-          <span className={`field-counter ${titleTooLong ? "error" : "hint"}`}>
-            {title.length}/{TASK_TITLE_MAX_LENGTH}
-          </span>
-        </label>
-        {titleError && <p className="error">{titleError}</p>}
-        <label>
           Description*
           <textarea
             value={description}
             maxLength={TASK_DESCRIPTION_MAX_LENGTH}
             onChange={(e) => {
               setDescription(e.target.value);
-              setSubmitError("");
             }}
             onBlur={() => setTouched((previous) => ({ ...previous, description: true }))}
             required
@@ -165,13 +131,11 @@ export const TaskForm = ({
             min={minDueDate}
             onChange={(e) => {
               setDueDate(e.target.value);
-              setSubmitError("");
             }}
             onBlur={() => setTouched((previous) => ({ ...previous, dueDate: true }))}
           />
         </label>
         {dueDateError && <p className="error">{dueDateError}</p>}
-        {submitError && <p className="error">{submitError}</p>}
       </div>
 
       <div className="form-footer">

@@ -1,6 +1,6 @@
 import { FormEvent, useState } from "react";
-import type { User } from "../types/User";
-import { register } from "../services/api";
+import type { User } from "../../types/User";
+import { register } from "../../services/api";
 
 const FULL_NAME_MAX_LENGTH = 100;
 const EMAIL_MAX_LENGTH = 254;
@@ -16,7 +16,6 @@ export const RegisterForm = ({ onAuthenticated, onBackToLoginClick, onCancel }: 
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [submitError, setSubmitError] = useState("");
   const [loading, setLoading] = useState(false);
   const [touched, setTouched] = useState({
     fullName: false,
@@ -73,7 +72,6 @@ export const RegisterForm = ({ onAuthenticated, onBackToLoginClick, onCancel }: 
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
-    setSubmitError("");
 
     if (!isFormValid) {
       setTouched({ fullName: true, email: true, password: true });
@@ -84,8 +82,7 @@ export const RegisterForm = ({ onAuthenticated, onBackToLoginClick, onCancel }: 
       setLoading(true);
       const user = await register(fullName.trim(), email.trim(), password);
       onAuthenticated(user);
-    } catch (err: any) {
-      setSubmitError(err?.response?.data?.message ?? "Registration failed. Please try again.");
+    } catch {
     } finally {
       setLoading(false);
     }
@@ -111,7 +108,6 @@ export const RegisterForm = ({ onAuthenticated, onBackToLoginClick, onCancel }: 
             maxLength={FULL_NAME_MAX_LENGTH}
             onChange={(e) => {
               setFullName(e.target.value);
-              setSubmitError("");
             }}
             onBlur={() => setTouched((previous) => ({ ...previous, fullName: true }))}
           />
@@ -128,7 +124,6 @@ export const RegisterForm = ({ onAuthenticated, onBackToLoginClick, onCancel }: 
             maxLength={EMAIL_MAX_LENGTH}
             onChange={(e) => {
               setEmail(e.target.value);
-              setSubmitError("");
             }}
             onBlur={() => setTouched((previous) => ({ ...previous, email: true }))}
           />
@@ -145,14 +140,12 @@ export const RegisterForm = ({ onAuthenticated, onBackToLoginClick, onCancel }: 
             value={password}
             onChange={(e) => {
               setPassword(e.target.value);
-              setSubmitError("");
             }}
             onBlur={() => setTouched((previous) => ({ ...previous, password: true }))}
           />
         </label>
         {passwordError && <p className="error">{passwordError}</p>}
         <p className="hint">Minimum 8 characters with at least 1 letter, 1 number, and 1 special character.</p>
-        {submitError && <p className="error">{submitError}</p>}
       </div>
 
       <div className="form-footer">

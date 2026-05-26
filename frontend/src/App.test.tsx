@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 import App from './App';
 
 describe('App auth screen', () => {
-    it('toggles alphabetical sort direction when selected twice', async () => {
+    it('opens sort menu and allows selecting due date with descending direction', async () => {
         const user = userEvent.setup();
 
         localStorage.setItem('todo_jwt', 'test-jwt-token');
@@ -25,14 +25,105 @@ describe('App auth screen', () => {
             </MemoryRouter>
         );
 
-        const alphabeticalButton = await screen.findByRole('button', {
-            name: 'Alphabetical (A-Z)'
+        const sortButton = await screen.findByRole('button', {
+            name: 'Sort and Filter'
         });
 
-        await user.click(alphabeticalButton);
-        await user.click(screen.getByRole('button', { name: 'Alphabetical (A-Z)' }));
+        await user.click(sortButton);
+        await user.click(screen.getByRole('button', { name: 'Due Date' }));
+        await user.click(screen.getByRole('button', { name: 'Descending' }));
 
-        expect(await screen.findByRole('button', { name: 'Alphabetical (Z-A)' })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Due Date' })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Descending' })).toBeInTheDocument();
+    });
+
+    it('closes sort menu when clicking outside of the popover', async () => {
+        const user = userEvent.setup();
+
+        localStorage.setItem('todo_jwt', 'test-jwt-token');
+        localStorage.setItem('todo_refresh_token', 'test-refresh-token');
+        localStorage.setItem(
+            'todo_user',
+            JSON.stringify({
+                id: '11111111-1111-1111-1111-111111111111',
+                fullName: 'Alice Johnson',
+                email: 'alice@todo.local'
+            })
+        );
+
+        render(
+            <MemoryRouter initialEntries={['/tasks']}>
+                <App />
+            </MemoryRouter>
+        );
+
+        const sortButton = await screen.findByRole('button', {
+            name: 'Sort and Filter'
+        });
+
+        await user.click(sortButton);
+        expect(screen.getByRole('menu', { name: 'Sort and Filter options' })).toBeInTheDocument();
+
+        await user.click(screen.getByRole('heading', { name: 'Task Dashboard' }));
+
+        expect(screen.queryByRole('menu', { name: 'Sort and Filter options' })).not.toBeInTheDocument();
+    });
+
+    it('hides completed section when overdue-only filter is enabled', async () => {
+        const user = userEvent.setup();
+
+        localStorage.setItem('todo_jwt', 'test-jwt-token');
+        localStorage.setItem('todo_refresh_token', 'test-refresh-token');
+        localStorage.setItem(
+            'todo_user',
+            JSON.stringify({
+                id: '11111111-1111-1111-1111-111111111111',
+                fullName: 'Alice Johnson',
+                email: 'alice@todo.local'
+            })
+        );
+
+        render(
+            <MemoryRouter initialEntries={['/tasks']}>
+                <App />
+            </MemoryRouter>
+        );
+
+        const sortButton = await screen.findByRole('button', {
+            name: 'Sort and Filter'
+        });
+
+        await user.click(sortButton);
+        await user.click(screen.getByRole('button', { name: 'Overdue Only' }));
+
+        expect(screen.queryByRole('button', { name: /Completed/i })).not.toBeInTheDocument();
+    });
+
+    it('renders separate pagination controls for in progress and completed tasks', async () => {
+        const user = userEvent.setup();
+
+        localStorage.setItem('todo_jwt', 'test-jwt-token');
+        localStorage.setItem('todo_refresh_token', 'test-refresh-token');
+        localStorage.setItem(
+            'todo_user',
+            JSON.stringify({
+                id: '11111111-1111-1111-1111-111111111111',
+                fullName: 'Alice Johnson',
+                email: 'alice@todo.local'
+            })
+        );
+
+        render(
+            <MemoryRouter initialEntries={['/tasks']}>
+                <App />
+            </MemoryRouter>
+        );
+
+        expect(await screen.findByRole('navigation', { name: 'In Progress pagination' })).toBeInTheDocument();
+
+        await user.click(screen.getByRole('button', { name: /Completed/i }));
+
+        expect(await screen.findByRole('navigation', { name: 'Completed pagination' })).toBeInTheDocument();
     });
 
     it('renders profile screen at /profile for authenticated users', async () => {

@@ -74,10 +74,6 @@ namespace ToDoManagement.Api.Migrations
 					b.Property<Guid>("OwnerId")
 						.HasColumnType("TEXT");
 
-					b.Property<string>("Title")
-						.IsRequired()
-						.HasColumnType("TEXT");
-
 					b.Property<DateTime>("UpdatedDateUtc")
 						.HasColumnType("TEXT");
 
@@ -115,10 +111,6 @@ namespace ToDoManagement.Api.Migrations
 						.HasColumnType("TEXT");
 
 					b.Property<Guid>("TaskId")
-						.HasColumnType("TEXT");
-
-					b.Property<string>("Title")
-						.IsRequired()
 						.HasColumnType("TEXT");
 
 					b.Property<DateTime>("UpdatedDateUtc")

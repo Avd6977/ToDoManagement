@@ -1,11 +1,12 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Navigate, Route, Routes, useNavigate } from "react-router-dom";
-import { LoginForm } from "./components/LoginForm";
-import { RegisterForm } from "./components/RegisterForm";
-import { TaskForm } from "./components/TaskForm";
-import { TaskList } from "./components/TaskList";
-import { AppHeader } from "./components/AppHeader";
-import { ProfileForm } from "./components/ProfileForm";
+import { LoginForm } from "./components/LoginForm/LoginForm";
+import { RegisterForm } from "./components/RegisterForm/RegisterForm";
+import { TaskForm } from "./components/TaskForm/TaskForm";
+import { TaskList } from "./components/TaskList/TaskList";
+import { AppHeader } from "./components/AppHeader/AppHeader";
+import { ProfileForm } from "./components/ProfileForm/ProfileForm";
+import { Toaster } from "./components/Toaster/Toaster";
 import {
   createTask,
   deleteTask,
@@ -29,20 +30,29 @@ const toLocalDateInputValue = (date: Date): string => {
   return `${year}-${month}-${day}`;
 };
 
+const TASK_PAGE_SIZE = 25;
+
 const App = (): JSX.Element => {
   const [user, setUser] = useState<User | null>(getStoredUser());
   const [openTasks, setOpenTasks] = useState<Task[]>([]);
   const [completedTasks, setCompletedTasks] = useState<Task[] | null>(null);
-  const [error, setError] = useState("");
   const [loadingOpenTasks, setLoadingOpenTasks] = useState(false);
   const [loadingCompletedTasks, setLoadingCompletedTasks] = useState(false);
   const [isCompletedExpanded, setIsCompletedExpanded] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [openTasksPage, setOpenTasksPage] = useState(1);
+  const [openTasksTotalPages, setOpenTasksTotalPages] = useState(0);
+  const [completedTasksPage, setCompletedTasksPage] = useState(1);
+  const [completedTasksTotalPages, setCompletedTasksTotalPages] = useState(0);
+  const [taskQueryVersion, setTaskQueryVersion] = useState(0);
   const [sortOption, setSortOption] = useState<TaskSortOption>("recentlyAdded");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
+  const [overdueOnly, setOverdueOnly] = useState(false);
+  const [isSortMenuOpen, setIsSortMenuOpen] = useState(false);
+  const sortMenuRef = useRef<HTMLDivElement | null>(null);
   const navigate = useNavigate();
 
-  const loadTasks = async (status: TaskStatusFilter, options?: { force?: boolean }) => {
+  const loadTasks = async (status: TaskStatusFilter, options?: { force?: boolean; page?: number }) => {
     if (!user) {
       return;
     }
@@ -62,18 +72,35 @@ const App = (): JSX.Element => {
         setLoadingOpenTasks(true);
       }
 
-      setError("");
-      const fetchedTasks = await getTasks({ search: searchTerm, status, sort: sortOption, sortDirection });
+      if (status === "completed" && overdueOnly) {
+        setCompletedTasks([]);
+        setCompletedTasksTotalPages(0);
+        return;
+      }
+
+      const requestedStatus: TaskStatusFilter =
+        status === "open" && overdueOnly ? "overdue" : status;
+
+      const requestedPage = options?.page ?? (status === "completed" ? completedTasksPage : openTasksPage);
+      const fetchedTasks = await getTasks({
+        search: searchTerm,
+        status: requestedStatus,
+        page: requestedPage,
+        pageSize: TASK_PAGE_SIZE,
+        sort: sortOption,
+        sortDirection,
+      });
       if (status == "completed")
       {
-        setCompletedTasks(fetchedTasks);
+        setCompletedTasks(fetchedTasks.items);
+        setCompletedTasksTotalPages(fetchedTasks.totalPages);
       }
       else
       {
-        setOpenTasks(fetchedTasks);
+        setOpenTasks(fetchedTasks.items);
+        setOpenTasksTotalPages(fetchedTasks.totalPages);
       }
-    } catch (err: any) {
-      setError(err?.response?.data?.message ?? "Unable to load tasks.");
+    } catch {
     } finally {
       if (status == "completed")
       {
@@ -87,34 +114,67 @@ const App = (): JSX.Element => {
   };
 
   useEffect(() => {
-    void loadTasks("open", { force: true });
-    setCompletedTasks(null);
-  }, [user, searchTerm, sortOption, sortDirection]);
+    void loadTasks("open", { force: true, page: openTasksPage });
+  }, [user, openTasksPage, taskQueryVersion]);
 
   const handleSortSelect = (nextSort: TaskSortOption) => {
-    if (nextSort === "alphabetical" && sortOption === "alphabetical") {
-      setSortDirection((previous) => previous === "asc" ? "desc" : "asc");
+    if (nextSort === sortOption) {
       return;
     }
-
     setSortOption(nextSort);
     setSortDirection("asc");
+    setOpenTasksPage(1);
+    setCompletedTasksPage(1);
+    setTaskQueryVersion((previous) => previous + 1);
+    setCompletedTasks(null);
+  };
+
+  const handleSortDirectionSelect = (nextDirection: SortDirection) => {
+    setSortDirection(nextDirection);
+    setOpenTasksPage(1);
+    setCompletedTasksPage(1);
+    setTaskQueryVersion((previous) => previous + 1);
+    setCompletedTasks(null);
   };
 
   useEffect(() => {
-    if (isCompletedExpanded && completedTasks == null)
+    if (isCompletedExpanded)
     {
-      void loadTasks("completed");
+      void loadTasks("completed", { force: true, page: completedTasksPage });
     }
-  }, [isCompletedExpanded, completedTasks, user]);
+  }, [isCompletedExpanded, user, completedTasksPage, taskQueryVersion]);
+
+  useEffect(() => {
+    const handleDocumentMouseDown = (event: MouseEvent) => {
+      if (!isSortMenuOpen) {
+        return;
+      }
+
+      if (sortMenuRef.current?.contains(event.target as Node)) {
+        return;
+      }
+
+      setIsSortMenuOpen(false);
+    };
+
+    document.addEventListener("mousedown", handleDocumentMouseDown);
+    return () => document.removeEventListener("mousedown", handleDocumentMouseDown);
+  }, [isSortMenuOpen]);
 
   useEffect(() => {
     const handleUnauthorized = () => {
       setUser(null);
       setOpenTasks([]);
       setCompletedTasks(null);
+      setOpenTasksPage(1);
+      setCompletedTasksPage(1);
+      setOpenTasksTotalPages(0);
+      setCompletedTasksTotalPages(0);
+      setTaskQueryVersion((previous) => previous + 1);
       setIsCompletedExpanded(false);
       setSearchTerm("");
+      setOverdueOnly(false);
+      setIsSortMenuOpen(false);
       navigate("/");
     };
 
@@ -124,20 +184,21 @@ const App = (): JSX.Element => {
 
   const handleCreate = async (task: Partial<Task>) => {
     await createTask(task);
-    await loadTasks("open", { force: true });
+    setOpenTasksPage(1);
+    await loadTasks("open", { force: true, page: 1 });
     if (completedTasks != null)
     {
-      await loadTasks("completed", { force: true });
+      await loadTasks("completed", { force: true, page: completedTasksPage });
     }
     navigate("/tasks");
   };
 
   const handleUpdate = async (taskId: string, updates: Partial<Task>) => {
     await updateTask(taskId, updates);
-    await loadTasks("open", { force: true });
+    await loadTasks("open", { force: true, page: openTasksPage });
     if (completedTasks != null)
     {
-      await loadTasks("completed", { force: true });
+      await loadTasks("completed", { force: true, page: completedTasksPage });
     }
   };
 
@@ -155,10 +216,10 @@ const App = (): JSX.Element => {
 
   const handleDelete = async (taskId: string) => {
     await deleteTask(taskId);
-    await loadTasks("open", { force: true });
+    await loadTasks("open", { force: true, page: openTasksPage });
     if (completedTasks != null)
     {
-      await loadTasks("completed", { force: true });
+      await loadTasks("completed", { force: true, page: completedTasksPage });
     }
   };
 
@@ -167,6 +228,10 @@ const App = (): JSX.Element => {
     setUser(null);
     setOpenTasks([]);
     setCompletedTasks(null);
+    setOpenTasksPage(1);
+    setCompletedTasksPage(1);
+    setOpenTasksTotalPages(0);
+    setCompletedTasksTotalPages(0);
     setIsCompletedExpanded(false);
     setSearchTerm("");
   };
@@ -183,45 +248,50 @@ const App = (): JSX.Element => {
 
   if (!user) {
     return (
-      <Routes>
-        <Route
-          path="/"
-          element={(
-            <main className="auth-layout">
-              <h1>ToDo Management</h1>
-              <p className="subtitle">Log in to manage your tasks.</p>
-              <LoginForm
-                onAuthenticated={setUser}
-                onRegisterClick={() => navigate("/register")}
-              />
-            </main>
-          )}
-        />
-        <Route
-          path="/register"
-          element={(
-            <main className="auth-layout">
-              <h1>ToDo Management</h1>
-              <p className="subtitle">Create your account.</p>
-              <RegisterForm
-                onAuthenticated={setUser}
-                onBackToLoginClick={() => navigate("/")}
-                onCancel={() => navigate("/")}
-              />
-            </main>
-          )}
-        />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+      <>
+        <Toaster />
+        <Routes>
+          <Route
+            path="/"
+            element={(
+              <main className="auth-layout">
+                <h1>ToDo Management</h1>
+                <p className="subtitle">Log in to manage your tasks.</p>
+                <LoginForm
+                  onAuthenticated={setUser}
+                  onRegisterClick={() => navigate("/register")}
+                />
+              </main>
+            )}
+          />
+          <Route
+            path="/register"
+            element={(
+              <main className="auth-layout">
+                <h1>ToDo Management</h1>
+                <p className="subtitle">Create your account.</p>
+                <RegisterForm
+                  onAuthenticated={setUser}
+                  onBackToLoginClick={() => navigate("/")}
+                  onCancel={() => navigate("/")}
+                />
+              </main>
+            )}
+          />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </>
     );
   }
 
   return (
-    <Routes>
-      <Route
-        path="/tasks"
-        element={(
-          <main className="app-layout">
+    <>
+      <Toaster />
+      <Routes>
+        <Route
+          path="/tasks"
+          element={(
+            <main className="app-layout">
             <AppHeader
               title="Task Dashboard"
               fullName={user.fullName}
@@ -240,48 +310,111 @@ const App = (): JSX.Element => {
               )}
             />
 
-            <label className="task-search">
-              Search Tasks
-              <input
-                value={searchTerm}
-                onChange={(event) => {
-                  setSearchTerm(event.target.value);
-                  setCompletedTasks(null);
-                }}
-                placeholder="Search title or description"
-              />
-            </label>
+            <div className="task-toolbar">
+              <label className="task-search">
+                Search Tasks
+                <input
+                  value={searchTerm}
+                  onChange={(event) => {
+                    setSearchTerm(event.target.value);
+                    setOpenTasksPage(1);
+                    setCompletedTasksPage(1);
+                    setTaskQueryVersion((previous) => previous + 1);
+                    setCompletedTasks(null);
+                  }}
+                  placeholder="Search description"
+                />
+              </label>
 
-            <div className="task-search">
-              <span>Sort Tasks</span>
-              <div className="actions">
+              <div className="sort-menu-wrapper sort-menu-right" ref={sortMenuRef}>
                 <button
                   type="button"
-                  className={sortOption === "recentlyAdded" ? "" : "secondary"}
-                  onClick={() => {
-                    handleSortSelect("recentlyAdded");
-                    setCompletedTasks(null);
-                  }}
+                  className="sort-icon-button secondary"
+                  title="Sort and Filter"
+                  aria-label="Sort and Filter"
+                  onClick={() => setIsSortMenuOpen((previous) => !previous)}
                 >
-                  Recently Added
+                  <svg
+                    aria-hidden="true"
+                    viewBox="0 0 24 24"
+                    width="16"
+                    height="16"
+                    focusable="false"
+                  >
+                    <path
+                      d="M3 6h18l-7 8v5l-4 2v-7L3 6z"
+                      fill="currentColor"
+                    />
+                  </svg>
                 </button>
-                <button
-                  type="button"
-                  className={sortOption === "alphabetical" ? "" : "secondary"}
-                  onClick={() => {
-                    handleSortSelect("alphabetical");
-                    setCompletedTasks(null);
-                  }}
-                >
-                  {sortOption === "alphabetical" && sortDirection === "desc"
-                    ? "Alphabetical (Z-A)"
-                    : "Alphabetical (A-Z)"}
-                </button>
+
+                {isSortMenuOpen && (
+                  <div className="sort-menu" role="menu" aria-label="Sort and Filter options">
+                    <p className="sort-menu-title">Sort By</p>
+                    <div className="actions">
+                      <button
+                        type="button"
+                        className={sortOption === "recentlyAdded" ? "" : "secondary"}
+                        onClick={() => handleSortSelect("recentlyAdded")}
+                      >
+                        Recently Added
+                      </button>
+                      <button
+                        type="button"
+                        className={sortOption === "alphabetical" ? "" : "secondary"}
+                        onClick={() => handleSortSelect("alphabetical")}
+                      >
+                        Alphabetical
+                      </button>
+                      <button
+                        type="button"
+                        className={sortOption === "dueDate" ? "" : "secondary"}
+                        onClick={() => handleSortSelect("dueDate")}
+                      >
+                        Due Date
+                      </button>
+                    </div>
+
+                    <p className="sort-menu-title">Direction</p>
+                    <div className="actions">
+                      <button
+                        type="button"
+                        className={sortDirection === "asc" ? "" : "secondary"}
+                        onClick={() => handleSortDirectionSelect("asc")}
+                      >
+                        Ascending
+                      </button>
+                      <button
+                        type="button"
+                        className={sortDirection === "desc" ? "" : "secondary"}
+                        onClick={() => handleSortDirectionSelect("desc")}
+                      >
+                        Descending
+                      </button>
+                    </div>
+
+                    <p className="sort-menu-title">Filters</p>
+                    <div className="actions">
+                      <button
+                        type="button"
+                        className={overdueOnly ? "" : "secondary"}
+                        onClick={() => {
+                          setOverdueOnly((previous) => !previous);
+                          setOpenTasksPage(1);
+                          setCompletedTasksPage(1);
+                          setTaskQueryVersion((previous) => previous + 1);
+                          setCompletedTasks(null);
+                        }}
+                      >
+                        Overdue Only
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
             {loadingOpenTasks && <p>Loading open tasks...</p>}
-            {error && <p className="error">{error}</p>}
             {!loadingOpenTasks && (
               <TaskList
                 tasks={openTasks}
@@ -291,7 +424,31 @@ const App = (): JSX.Element => {
                 onUpdate={handleUpdate}
               />
             )}
+            {!loadingOpenTasks && openTasksTotalPages > 1 && (
+              <div className="pagination-bar" role="navigation" aria-label="In Progress pagination">
+                <button
+                  type="button"
+                  className="secondary"
+                  onClick={() => setOpenTasksPage((previous) => Math.max(1, previous - 1))}
+                  disabled={openTasksPage <= 1}
+                >
+                  Previous
+                </button>
+                <span>
+                  Page {openTasksPage} of {openTasksTotalPages}
+                </span>
+                <button
+                  type="button"
+                  className="secondary"
+                  onClick={() => setOpenTasksPage((previous) => Math.min(openTasksTotalPages, previous + 1))}
+                  disabled={openTasksPage >= openTasksTotalPages}
+                >
+                  Next
+                </button>
+              </div>
+            )}
 
+            {!overdueOnly && (
             <section className="completed-section">
               <button
                 type="button"
@@ -314,16 +471,40 @@ const App = (): JSX.Element => {
                       onUpdate={handleUpdate}
                     />
                   )}
+                  {!loadingCompletedTasks && completedTasksTotalPages > 1 && (
+                    <div className="pagination-bar" role="navigation" aria-label="Completed pagination">
+                      <button
+                        type="button"
+                        className="secondary"
+                        onClick={() => setCompletedTasksPage((previous) => Math.max(1, previous - 1))}
+                        disabled={completedTasksPage <= 1}
+                      >
+                        Previous
+                      </button>
+                      <span>
+                        Page {completedTasksPage} of {completedTasksTotalPages}
+                      </span>
+                      <button
+                        type="button"
+                        className="secondary"
+                        onClick={() => setCompletedTasksPage((previous) => Math.min(completedTasksTotalPages, previous + 1))}
+                        disabled={completedTasksPage >= completedTasksTotalPages}
+                      >
+                        Next
+                      </button>
+                    </div>
+                  )}
                 </>
               )}
             </section>
-          </main>
-        )}
-      />
-      <Route
-        path="/create-task"
-        element={(
-          <main className="app-layout">
+            )}
+            </main>
+          )}
+        />
+        <Route
+          path="/create-task"
+          element={(
+            <main className="app-layout">
             <AppHeader
               title="Create Task"
               fullName={user.fullName}
@@ -338,13 +519,13 @@ const App = (): JSX.Element => {
               minDueDate={toLocalDateInputValue(new Date())}
               onCancel={() => navigate("/tasks")}
             />
-          </main>
-        )}
-      />
-      <Route
-        path="/profile"
-        element={(
-          <main className="app-layout">
+            </main>
+          )}
+        />
+        <Route
+          path="/profile"
+          element={(
+            <main className="app-layout">
             <AppHeader
               title="Profile"
               fullName={user.fullName}
@@ -358,11 +539,12 @@ const App = (): JSX.Element => {
               onSave={handleSaveProfile}
               onCancel={() => navigate("/tasks")}
             />
-          </main>
-        )}
-      />
-      <Route path="*" element={<Navigate to="/tasks" replace />} />
-    </Routes>
+            </main>
+          )}
+        />
+        <Route path="*" element={<Navigate to="/tasks" replace />} />
+      </Routes>
+    </>
   );
 };
 

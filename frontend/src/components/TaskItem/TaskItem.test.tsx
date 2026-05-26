@@ -2,8 +2,8 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { TaskItem } from "./TaskItem";
-import type { Task } from "../types/Task";
-import type { User } from "../types/User";
+import type { Task } from "../../types/Task";
+import type { User } from "../../types/User";
 
 describe("TaskItem", () => {
   it("requires confirmation before deleting", async () => {
@@ -12,7 +12,6 @@ describe("TaskItem", () => {
 
     const task: Task = {
       id: "task-1",
-      title: "Delete me",
       description: "Task to delete",
       dueDate: null,
       isCompleted: false,
@@ -57,5 +56,34 @@ describe("TaskItem", () => {
     // ASSERT
     expect(onDelete).toHaveBeenCalledTimes(1);
     expect(onDelete).toHaveBeenCalledWith("task-1");
+  });
+
+  it("does not show overdue state for completed tasks", () => {
+    const pastDueDate = new Date(Date.now() - 86_400_000).toISOString();
+
+    const task: Task = {
+      id: "task-2",
+      description: "Completed task",
+      dueDate: pastDueDate,
+      isCompleted: true,
+    };
+
+    const currentUser: User = {
+      id: "user-1",
+      fullName: "Alice User",
+      email: "alice@todo.local",
+    };
+
+    render(
+      <TaskItem
+        task={task}
+        currentUser={currentUser}
+        onToggleComplete={vi.fn().mockResolvedValue(undefined)}
+        onDelete={vi.fn().mockResolvedValue(undefined)}
+        onUpdate={vi.fn().mockResolvedValue(undefined)}
+      />
+    );
+
+    expect(screen.queryByLabelText("Overdue")).not.toBeInTheDocument();
   });
 });

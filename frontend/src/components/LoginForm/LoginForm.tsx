@@ -1,6 +1,6 @@
 import { FormEvent, useState } from "react";
-import type { User } from "../types/User";
-import { login } from "../services/api";
+import type { User } from "../../types/User";
+import { login } from "../../services/api";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -15,7 +15,6 @@ export const LoginForm = ({
 }: LoginFormProps): JSX.Element => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [submitError, setSubmitError] = useState("");
   const [loading, setLoading] = useState(false);
   const [touched, setTouched] = useState({
     email: false,
@@ -34,7 +33,6 @@ export const LoginForm = ({
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
-    setSubmitError("");
 
     if (!isFormValid) {
       setTouched({ email: true, password: true });
@@ -45,8 +43,7 @@ export const LoginForm = ({
       setLoading(true);
       const user = await login(email.trim(), password);
       onAuthenticated(user);
-    } catch (err: any) {
-      setSubmitError(err?.response?.data?.message ?? "Login failed. Please try again.");
+    } catch {
     } finally {
       setLoading(false);
     }
@@ -63,7 +60,6 @@ export const LoginForm = ({
             value={email}
             onChange={(e) => {
               setEmail(e.target.value);
-              setSubmitError("");
             }}
             onBlur={() => setTouched((previous) => ({ ...previous, email: true }))}
           />
@@ -76,7 +72,6 @@ export const LoginForm = ({
             value={password}
             onChange={(e) => {
               setPassword(e.target.value);
-              setSubmitError("");
             }}
             onBlur={() => setTouched((previous) => ({ ...previous, password: true }))}
           />
@@ -87,7 +82,6 @@ export const LoginForm = ({
             Register
           </button>
         </div>
-        {submitError && <p className="error">{submitError}</p>}
       </div>
 
       <div className="form-footer">

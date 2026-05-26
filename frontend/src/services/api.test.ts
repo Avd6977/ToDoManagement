@@ -32,8 +32,10 @@ describe('api service', () => {
 
         const tasks = await getTasks();
 
-        expect(tasks).toHaveLength(2);
-        expect(tasks[0]).toMatchObject({ title: 'Mock Task' });
+        expect(tasks.items).toHaveLength(2);
+        expect(tasks.items[0]).toMatchObject({ description: 'From MSW' });
+        expect(tasks.page).toBe(1);
+        expect(tasks.pageSize).toBe(25);
     });
 
     it('getTasks supports alphabetical sort option', async () => {
@@ -41,9 +43,9 @@ describe('api service', () => {
 
         const tasks = await getTasks({ sort: 'alphabetical' });
 
-        expect(tasks).toHaveLength(2);
-        expect(tasks[0]).toMatchObject({ title: 'Completed Task' });
-        expect(tasks[1]).toMatchObject({ title: 'Mock Task' });
+        expect(tasks.items).toHaveLength(2);
+        expect(tasks.items[0]).toMatchObject({ description: 'Already done' });
+        expect(tasks.items[1]).toMatchObject({ description: 'From MSW' });
     });
 
     it('getTasks supports descending alphabetical sort direction', async () => {
@@ -54,9 +56,38 @@ describe('api service', () => {
             sortDirection: 'desc'
         });
 
-        expect(tasks).toHaveLength(2);
-        expect(tasks[0]).toMatchObject({ title: 'Mock Task' });
-        expect(tasks[1]).toMatchObject({ title: 'Completed Task' });
+        expect(tasks.items).toHaveLength(2);
+        expect(tasks.items[0]).toMatchObject({ description: 'From MSW' });
+        expect(tasks.items[1]).toMatchObject({ description: 'Already done' });
+    });
+
+    it('getTasks supports dueDate sort option', async () => {
+        localStorage.setItem('todo_jwt', 'test-jwt-token');
+
+        const tasks = await getTasks({ sort: 'dueDate', sortDirection: 'asc' });
+
+        expect(tasks.items).toHaveLength(2);
+        expect(tasks.items[0]).toMatchObject({ description: 'From MSW' });
+    });
+
+    it('getTasks supports overdue status filter', async () => {
+        localStorage.setItem('todo_jwt', 'test-jwt-token');
+
+        const tasks = await getTasks({ status: 'overdue' });
+
+        expect(tasks.items).toHaveLength(1);
+        expect(tasks.items[0]).toMatchObject({ description: 'From MSW' });
+    });
+
+    it('getTasks supports explicit paging parameters', async () => {
+        localStorage.setItem('todo_jwt', 'test-jwt-token');
+
+        const tasks = await getTasks({ page: 2, pageSize: 25 });
+
+        expect(tasks.page).toBe(2);
+        expect(tasks.pageSize).toBe(25);
+        expect(tasks.totalPages).toBeGreaterThan(1);
+        expect(tasks.items).toHaveLength(25);
     });
 
     it('updateProfile returns updated user profile from mocked API', async () => {

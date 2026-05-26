@@ -1,6 +1,6 @@
-import type { Task } from "../types/Task";
-import type { User } from "../types/User";
-import { TaskItem } from "./TaskItem";
+import type { Task } from "../../types/Task";
+import type { User } from "../../types/User";
+import { TaskItem } from "../TaskItem/TaskItem";
 
 interface TaskListProps {
   tasks: Task[];
