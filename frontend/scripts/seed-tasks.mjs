@@ -44,7 +44,26 @@ if (!email || !password || Number.isNaN(count) || Number.isNaN(startAt) || count
   printUsageAndExit();
 }
 
-const apiClient = axios.create({ baseURL: apiBaseUrl, timeout: 15000 });
+const apiClient = axios.create({
+  baseURL: apiBaseUrl,
+  timeout: 15000,
+  withCredentials: true,
+});
+
+const toCookieHeader = (setCookieHeader) => {
+  if (!setCookieHeader) {
+    return "";
+  }
+
+  const values = Array.isArray(setCookieHeader)
+    ? setCookieHeader
+    : [setCookieHeader];
+
+  return values
+    .map((value) => String(value).split(";")[0])
+    .filter(Boolean)
+    .join("; ");
+};
 
 const login = async () => {
   const response = await apiClient.post("/auth/login", {
@@ -52,7 +71,7 @@ const login = async () => {
     password,
   });
 
-  return response.data?.token;
+  return toCookieHeader(response.headers?.["set-cookie"]);
 };
 
 const register = async () => {
@@ -62,35 +81,36 @@ const register = async () => {
     password,
   });
 
-  return response.data?.token;
+  return toCookieHeader(response.headers?.["set-cookie"]);
 };
 
-const getAccessToken = async () => {
+const ensureAuthenticated = async () => {
   try {
-    const token = await login();
-    if (!token) {
-      throw new Error("Login succeeded but no token was returned.");
+    const loginCookie = await login();
+    if (!loginCookie) {
+      throw new Error("Login succeeded but no auth cookies were returned.");
     }
 
-    return token;
+    return loginCookie;
   } catch (error) {
     if (!shouldRegister) {
       throw error;
     }
 
-    const registeredToken = await register();
-    if (!registeredToken) {
-      throw new Error("Registration succeeded but no token was returned.");
+    await register();
+    const loginCookie = await login();
+    if (!loginCookie) {
+      throw new Error("Login succeeded but no auth cookies were returned.");
     }
 
-    return registeredToken;
+    return loginCookie;
   }
 };
 
 const createTaskDescription = (prefixValue, numericValue) => `${prefixValue} ${String(numericValue).padStart(3, "0")}`;
 
 const seedTasks = async () => {
-  const token = await getAccessToken();
+  const cookieHeader = await ensureAuthenticated();
 
   for (let index = 0; index < count; index += 1) {
     const taskNumber = startAt + index;
@@ -104,7 +124,7 @@ const seedTasks = async () => {
       },
       {
         headers: {
-          Authorization: `Bearer ${token}`,
+          Cookie: cookieHeader,
         },
       }
     );

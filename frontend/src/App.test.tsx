@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it } from 'vitest';
@@ -33,7 +33,9 @@ describe('App auth screen', () => {
         await user.click(sortButton);
         await user.click(screen.getByRole('button', { name: 'Overdue Only' }));
 
-        expect(screen.queryByRole('button', { name: /Completed/i })).not.toBeInTheDocument();
+        await waitFor(() => {
+            expect(screen.queryByRole('button', { name: /Completed/i })).not.toBeInTheDocument();
+        });
     });
 
     it('renders separate pagination controls for in progress and completed tasks', async () => {
