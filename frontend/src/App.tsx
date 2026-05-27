@@ -4,7 +4,7 @@ import { LoginForm } from "src/components/LoginForm/LoginForm";
 import { RegisterForm } from "src/components/RegisterForm/RegisterForm";
 import { Toaster } from "src/components/Toaster/Toaster";
 import { DashboardView } from "src/components/DashboardView/DashboardView";
-import { CreateView } from "src/components/CreateView/CreateView";
+import { CreateTask } from "src/components/CreateTask/CreateTask";
 import { ProfileView } from "src/components/ProfileView/ProfileView";
 import { getSession, logout } from "src/services/auth.service";
 import type { User } from "src/types/User";
@@ -119,7 +119,7 @@ const App = (): JSX.Element => {
         />
         <Route
           path="/create-task"
-          element={<CreateView currentUser={user} onLogout={handleLogout} />}
+          element={<CreateTask currentUser={user} onLogout={handleLogout} />}
         />
         <Route
           path="/profile"

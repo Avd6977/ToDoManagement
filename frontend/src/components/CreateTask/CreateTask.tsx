@@ -12,15 +12,15 @@ const toLocalDateInputValue = (date: Date): string => {
   return `${year}-${month}-${day}`;
 };
 
-interface CreateViewProps {
+interface CreateTaskProps {
   currentUser: User;
   onLogout: () => Promise<void>;
 }
 
-export const CreateView = ({
+export const CreateTask = ({
   currentUser,
   onLogout,
-}: CreateViewProps): JSX.Element => {
+}: CreateTaskProps): JSX.Element => {
   const navigate = useNavigate();
 
   const handleCreate = async (task: Partial<Task>) => {
