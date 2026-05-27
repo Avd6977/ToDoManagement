@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
-import { TaskForm } from './TaskForm';
+import { TaskForm } from 'src/components/TaskForm/TaskForm';
 
 const toLocalDateInputValue = (date: Date): string => {
     const year = date.getFullYear();
@@ -69,7 +69,7 @@ describe('TaskForm', () => {
                 enforceNoPastDueDateChanges
                 initialValue={{
                     description: 'Description',
-                    dueDate: new Date(`${tomorrowValue}T00:00:00`).toISOString()
+                    dueDate: tomorrowValue
                 }}
             />
         );
@@ -99,7 +99,7 @@ describe('TaskForm', () => {
                 enforceNoPastDueDateChanges
                 initialValue={{
                     description: 'Description',
-                    dueDate: new Date(`${yesterdayValue}T00:00:00`).toISOString()
+                    dueDate: yesterdayValue
                 }}
             />
         );

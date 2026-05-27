@@ -32,17 +32,20 @@ public sealed class AuthService : IAuthService
         _jwtOptions = jwtOptions.Value;
     }
 
-    public async Task<ServiceResult<AuthResponse>> RegisterAsync(RegisterRequest request, CancellationToken cancellationToken)
+    public async Task<ServiceResult<IssuedAuthResult>> RegisterAsync(RegisterRequest request, CancellationToken cancellationToken)
     {
         var fullName = request.FullName.Trim();
         var email = request.Username.Trim();
 
-        var users = await _dbContext.Users.ToListAsync(cancellationToken);
-        var existingUser = users.FirstOrDefault(u => u.Username.Equals(email, StringComparison.OrdinalIgnoreCase));
+        var existingUser = await _dbContext.Users
+            .AsNoTracking()
+            .FirstOrDefaultAsync(
+                u => EF.Functions.Collate(u.Username, "NOCASE") == email,
+                cancellationToken);
 
         if (existingUser is not null)
         {
-            return ServiceResult<AuthResponse>.Failure(StatusCodes.Status409Conflict, "Email is already taken.");
+            return ServiceResult<IssuedAuthResult>.Failure(StatusCodes.Status409Conflict, "Email is already taken.");
         }
 
         var user = new User
@@ -55,51 +58,65 @@ public sealed class AuthService : IAuthService
 
         _dbContext.Users.Add(user);
         var authResponse = await IssueTokensAsync(user, cancellationToken);
-        return ServiceResult<AuthResponse>.Success(authResponse);
+        return ServiceResult<IssuedAuthResult>.Success(authResponse);
     }
 
-    public async Task<ServiceResult<AuthResponse>> LoginAsync(LoginRequest request, CancellationToken cancellationToken)
+    public async Task<ServiceResult<IssuedAuthResult>> LoginAsync(LoginRequest request, CancellationToken cancellationToken)
     {
         var email = request.Username.Trim();
-        var users = await _dbContext.Users.ToListAsync(cancellationToken);
-        var user = users.FirstOrDefault(u => u.Username.Equals(email, StringComparison.OrdinalIgnoreCase));
+        var user = await _dbContext.Users
+            .AsNoTracking()
+            .FirstOrDefaultAsync(
+                u => EF.Functions.Collate(u.Username, "NOCASE") == email,
+                cancellationToken);
 
         if (user is null || !_passwordHasher.VerifyPassword(request.Password, user.PasswordHash))
         {
-            return ServiceResult<AuthResponse>.Failure(StatusCodes.Status401Unauthorized, "Invalid email or password.");
+            return ServiceResult<IssuedAuthResult>.Failure(StatusCodes.Status401Unauthorized, "Invalid email or password.");
         }
 
         var authResponse = await IssueTokensAsync(user, cancellationToken);
-        return ServiceResult<AuthResponse>.Success(authResponse);
+        return ServiceResult<IssuedAuthResult>.Success(authResponse);
     }
 
-    public async Task<ServiceResult<AuthResponse>> RefreshAsync(RefreshTokenRequest request, CancellationToken cancellationToken)
+    public async Task<ServiceResult<IssuedAuthResult>> RefreshAsync(RefreshTokenRequest request, CancellationToken cancellationToken)
     {
         var tokenHash = _refreshTokenService.HashToken(request.RefreshToken);
         var refreshToken = await _dbContext.RefreshTokens
+            .AsNoTracking()
             .FirstOrDefaultAsync(t => t.TokenHash == tokenHash, cancellationToken);
 
         if (refreshToken is null)
         {
-            return ServiceResult<AuthResponse>.Failure(StatusCodes.Status401Unauthorized, "Refresh token is invalid.");
+            return ServiceResult<IssuedAuthResult>.Failure(StatusCodes.Status401Unauthorized, "Refresh token is invalid.");
         }
 
         var nowUtc = _dateTimeService.UtcNow;
         if (!refreshToken.IsActive(nowUtc))
         {
-            return ServiceResult<AuthResponse>.Failure(StatusCodes.Status401Unauthorized, "Refresh token is no longer active.");
+            return ServiceResult<IssuedAuthResult>.Failure(StatusCodes.Status401Unauthorized, "Refresh token is no longer active.");
         }
 
-        var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Id == refreshToken.UserId, cancellationToken);
+        var user = await _dbContext.Users
+            .AsNoTracking()
+            .FirstOrDefaultAsync(u => u.Id == refreshToken.UserId, cancellationToken);
         if (user is null)
         {
-            return ServiceResult<AuthResponse>.Failure(StatusCodes.Status401Unauthorized, "User for refresh token was not found.");
+            return ServiceResult<IssuedAuthResult>.Failure(StatusCodes.Status401Unauthorized, "User for refresh token was not found.");
         }
 
         var newRefreshTokenValue = _refreshTokenService.GenerateToken();
         var newRefreshTokenHash = _refreshTokenService.HashToken(newRefreshTokenValue);
-        refreshToken.RevokedAtUtc = nowUtc;
-        refreshToken.ReplacedByTokenHash = newRefreshTokenHash;
+        var revokedRows = await _dbContext.RefreshTokens
+            .Where(t => t.Id == refreshToken.Id && t.RevokedAtUtc == null)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(t => t.RevokedAtUtc, nowUtc)
+                .SetProperty(t => t.ReplacedByTokenHash, newRefreshTokenHash), cancellationToken);
+
+        if (revokedRows == 0)
+        {
+            return ServiceResult<IssuedAuthResult>.Failure(StatusCodes.Status401Unauthorized, "Refresh token is no longer active.");
+        }
 
         _dbContext.RefreshTokens.Add(new RefreshToken
         {
@@ -112,7 +129,7 @@ public sealed class AuthService : IAuthService
 
         await _dbContext.SaveChangesAsync(cancellationToken);
 
-        return ServiceResult<AuthResponse>.Success(new AuthResponse
+        return ServiceResult<IssuedAuthResult>.Success(new IssuedAuthResult
         {
             Id = user.Id,
             FullName = user.FullName,
@@ -175,7 +192,7 @@ public sealed class AuthService : IAuthService
         });
     }
 
-    private async Task<AuthResponse> IssueTokensAsync(User user, CancellationToken cancellationToken)
+    private async Task<IssuedAuthResult> IssueTokensAsync(User user, CancellationToken cancellationToken)
     {
         var nowUtc = _dateTimeService.UtcNow;
         var refreshTokenValue = _refreshTokenService.GenerateToken();
@@ -192,7 +209,7 @@ public sealed class AuthService : IAuthService
 
         await _dbContext.SaveChangesAsync(cancellationToken);
 
-        return new AuthResponse
+        return new IssuedAuthResult
         {
             Id = user.Id,
             FullName = user.FullName,

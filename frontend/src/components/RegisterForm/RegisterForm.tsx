@@ -1,6 +1,6 @@
 import { FormEvent, useState } from "react";
-import type { User } from "../../types/User";
-import { register } from "../../services/api";
+import type { User } from "src/types/User";
+import { register } from "src/services/auth.service";
 
 const FULL_NAME_MAX_LENGTH = 100;
 const EMAIL_MAX_LENGTH = 254;

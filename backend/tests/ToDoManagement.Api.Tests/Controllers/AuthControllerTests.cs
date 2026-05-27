@@ -1,8 +1,10 @@
 using System.Security.Claims;
 using FluentAssertions;
 using FluentAssertions.Execution;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 using Moq;
 using ToDoManagement.Api.Controllers;
 using ToDoManagement.Api.Dtos;
@@ -18,10 +20,15 @@ public sealed class AuthControllerTests
     private const string RefreshCookieName = "todo_refresh_token";
 
     private readonly Mock<IAuthService> _authServiceMock;
+    private readonly IOptions<JwtTokenDto> _jwtOptions;
 
     public AuthControllerTests()
     {
         _authServiceMock = new Mock<IAuthService>();
+        _jwtOptions = Options.Create(new JwtTokenDto
+        {
+            RefreshTokenExpiresInDays = 7
+        });
     }
 
     [Fact]
@@ -35,7 +42,7 @@ public sealed class AuthControllerTests
             Password = "Strong1!"
         };
 
-        var response = new AuthResponse
+        var issuedResult = new IssuedAuthResult
         {
             Id = Guid.NewGuid(),
             FullName = "Alice Johnson",
@@ -44,9 +51,16 @@ public sealed class AuthControllerTests
             RefreshToken = "refresh-token"
         };
 
+        var expectedResponse = new AuthResponse
+        {
+            Id = issuedResult.Id,
+            FullName = issuedResult.FullName,
+            Username = issuedResult.Username
+        };
+
         _authServiceMock
             .Setup(x => x.RegisterAsync(request, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(ServiceResult<AuthResponse>.Success(response));
+            .ReturnsAsync(ServiceResult<IssuedAuthResult>.Success(issuedResult));
 
         var controller = CreateController();
 
@@ -56,9 +70,10 @@ public sealed class AuthControllerTests
         // ASSERT
         using var scope = new AssertionScope();
         var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject;
-        okResult.Value.Should().BeEquivalentTo(response);
+        okResult.Value.Should().BeEquivalentTo(expectedResponse);
         controller.Response.Headers.SetCookie.ToString().Should().Contain(AccessCookieName);
         controller.Response.Headers.SetCookie.ToString().Should().Contain(RefreshCookieName);
+        controller.Response.Headers.SetCookie.ToString().ToLowerInvariant().Should().Contain("max-age=604800");
     }
 
     [Fact]
@@ -74,7 +89,7 @@ public sealed class AuthControllerTests
 
         _authServiceMock
             .Setup(x => x.RegisterAsync(request, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(ServiceResult<AuthResponse>.Failure(409, "Email is already taken."));
+            .ReturnsAsync(ServiceResult<IssuedAuthResult>.Failure(409, "Email is already taken."));
 
         var controller = CreateController();
 
@@ -136,7 +151,7 @@ public sealed class AuthControllerTests
     {
         // ARRANGE
         const string refreshTokenValue = "refresh-token-cookie";
-        var response = new AuthResponse
+        var issuedResult = new IssuedAuthResult
         {
             Id = Guid.NewGuid(),
             FullName = "Alice Johnson",
@@ -149,7 +164,7 @@ public sealed class AuthControllerTests
             .Setup(x => x.RefreshAsync(
                 It.Is<RefreshTokenRequest>(r => r.RefreshToken == refreshTokenValue),
                 It.IsAny<CancellationToken>()))
-            .ReturnsAsync(ServiceResult<AuthResponse>.Success(response));
+            .ReturnsAsync(ServiceResult<IssuedAuthResult>.Success(issuedResult));
 
         var controller = CreateController();
         controller.ControllerContext.HttpContext.Request.Headers.Append("Cookie", $"{RefreshCookieName}={refreshTokenValue}");
@@ -242,9 +257,25 @@ public sealed class AuthControllerTests
         okResult.Value.Should().BeEquivalentTo(response);
     }
 
+    [Fact]
+    public void Logout_Should_RequireAuthorizeAttribute()
+    {
+        // ARRANGE
+        var logoutMethod = typeof(AuthController).GetMethod(nameof(AuthController.Logout));
+
+        // ACT
+        var authorizeAttribute = logoutMethod?.GetCustomAttributes(typeof(AuthorizeAttribute), inherit: true);
+
+        // ASSERT
+        using var scope = new AssertionScope();
+        logoutMethod.Should().NotBeNull();
+        authorizeAttribute.Should().NotBeNull();
+        authorizeAttribute!.Should().NotBeEmpty();
+    }
+
     private AuthController CreateController(Guid? userId = null)
     {
-        var controller = new AuthController(_authServiceMock.Object)
+        var controller = new AuthController(_authServiceMock.Object, _jwtOptions)
         {
             ControllerContext = new ControllerContext
             {

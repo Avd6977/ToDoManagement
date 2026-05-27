@@ -1,9 +1,9 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { TaskItem } from "./TaskItem";
-import type { Task } from "../../types/Task";
-import type { User } from "../../types/User";
+import { TaskItem } from "src/components/TaskItem/TaskItem";
+import type { Task } from "src/types/Task";
+import type { User } from "src/types/User";
 
 describe("TaskItem", () => {
   it("requires confirmation before deleting", async () => {
@@ -60,7 +60,8 @@ describe("TaskItem", () => {
   });
 
   it("does not show overdue state for completed tasks", () => {
-    const pastDueDate = new Date(Date.now() - 86_400_000).toISOString();
+    const yesterday = new Date(Date.now() - 86_400_000);
+    const pastDueDate = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, "0")}-${String(yesterday.getDate()).padStart(2, "0")}`;
 
     const task: Task = {
       id: "task-2",

@@ -151,6 +151,107 @@ public sealed class TaskServiceTests
     }
 
     [Fact]
+    public async Task UpdateTaskAsync_Should_ReturnForbidden_WhenUserDoesNotOwnTask()
+    {
+        // ARRANGE
+        await using var dbContext = await CreateDbContextAsync();
+        var ownerId = Guid.NewGuid();
+        var otherUserId = Guid.NewGuid();
+        var taskId = Guid.NewGuid();
+
+        dbContext.Users.AddRange(
+            new User
+            {
+                Id = ownerId,
+                FullName = "Owner User",
+                Username = "owner-user-update",
+                PasswordHash = "hash"
+            },
+            new User
+            {
+                Id = otherUserId,
+                FullName = "Other User",
+                Username = "other-user-update",
+                PasswordHash = "hash"
+            });
+
+        dbContext.Tasks.Add(new TaskItem
+        {
+            Id = taskId,
+            Description = "Existing task",
+            OwnerId = ownerId,
+            IsCompleted = false,
+            CreatedDateUtc = FixedNowUtc.AddDays(-2),
+            UpdatedDateUtc = FixedNowUtc.AddDays(-1)
+        });
+
+        await dbContext.SaveChangesAsync();
+        var service = new TaskService(dbContext, _dateTimeServiceMock.Object);
+
+        // ACT
+        var result = await service.UpdateTaskAsync(otherUserId, taskId, new ToDoManagement.Api.Dtos.UpdateTaskRequest
+        {
+            Description = "Changed",
+            DueDate = DateOnly.FromDateTime(FixedNowUtc).AddDays(1),
+            IsCompleted = false
+        }, CancellationToken.None);
+
+        // ASSERT
+        using var scope = new AssertionScope();
+        result.IsSuccess.Should().BeFalse();
+        result.StatusCode.Should().Be(403);
+        result.Message.Should().Be("Only the owner can update this task.");
+    }
+
+    [Fact]
+    public async Task DeleteTaskAsync_Should_ReturnForbidden_WhenUserDoesNotOwnTask()
+    {
+        // ARRANGE
+        await using var dbContext = await CreateDbContextAsync();
+        var ownerId = Guid.NewGuid();
+        var otherUserId = Guid.NewGuid();
+        var taskId = Guid.NewGuid();
+
+        dbContext.Users.AddRange(
+            new User
+            {
+                Id = ownerId,
+                FullName = "Owner User",
+                Username = "owner-user-delete",
+                PasswordHash = "hash"
+            },
+            new User
+            {
+                Id = otherUserId,
+                FullName = "Other User",
+                Username = "other-user-delete",
+                PasswordHash = "hash"
+            });
+
+        dbContext.Tasks.Add(new TaskItem
+        {
+            Id = taskId,
+            Description = "Delete task",
+            OwnerId = ownerId,
+            IsCompleted = false,
+            CreatedDateUtc = FixedNowUtc.AddDays(-2),
+            UpdatedDateUtc = FixedNowUtc.AddDays(-1)
+        });
+
+        await dbContext.SaveChangesAsync();
+        var service = new TaskService(dbContext, _dateTimeServiceMock.Object);
+
+        // ACT
+        var result = await service.DeleteTaskAsync(otherUserId, taskId, CancellationToken.None);
+
+        // ASSERT
+        using var scope = new AssertionScope();
+        result.IsSuccess.Should().BeFalse();
+        result.StatusCode.Should().Be(403);
+        result.Message.Should().Be("Only the owner can delete this task.");
+    }
+
+    [Fact]
     public async Task GetTasksAsync_Should_NotReturnTasksOwnedByDifferentUser()
     {
         // ARRANGE
@@ -243,7 +344,7 @@ public sealed class TaskServiceTests
                 IsCompleted = false,
                 CreatedDateUtc = now.AddMinutes(-index),
                 UpdatedDateUtc = now.AddMinutes(-index),
-                DueDate = now.Date.AddDays(index)
+                DueDate = DateOnly.FromDateTime(now).AddDays(index)
             });
         }
 
@@ -314,7 +415,7 @@ public sealed class TaskServiceTests
     }
 
     [Fact]
-    public async Task GetTasksAsync_Should_SortByRecentlyAdded_WhenRequested()
+    public async Task GetTasksAsync_Should_SortByRecentlyAddedDescending_WhenRequested()
     {
         // ARRANGE
         await using var dbContext = await CreateDbContextAsync();
@@ -355,7 +456,7 @@ public sealed class TaskServiceTests
         var service = new TaskService(dbContext, _dateTimeServiceMock.Object);
 
         // ACT
-        var result = await service.GetTasksAsync(userId, null, "open", "recentlyAdded", "asc", 1, 25, CancellationToken.None);
+        var result = await service.GetTasksAsync(userId, null, "open", "recentlyAdded", "desc", 1, 25, CancellationToken.None);
 
         // ASSERT
         using var scope = new AssertionScope();
@@ -434,7 +535,7 @@ public sealed class TaskServiceTests
                 Description = "Should be included",
                 OwnerId = userId,
                 IsCompleted = false,
-                DueDate = FixedNowUtc.Date.AddDays(-1),
+                DueDate = DateOnly.FromDateTime(FixedNowUtc).AddDays(-1),
                 CreatedDateUtc = FixedNowUtc.AddDays(-3),
                 UpdatedDateUtc = FixedNowUtc.AddDays(-3)
             },
@@ -444,7 +545,7 @@ public sealed class TaskServiceTests
                 Description = "Should be excluded",
                 OwnerId = userId,
                 IsCompleted = false,
-                DueDate = FixedNowUtc.Date.AddDays(2),
+                DueDate = DateOnly.FromDateTime(FixedNowUtc).AddDays(2),
                 CreatedDateUtc = FixedNowUtc.AddDays(-2),
                 UpdatedDateUtc = FixedNowUtc.AddDays(-2)
             },
@@ -454,7 +555,7 @@ public sealed class TaskServiceTests
                 Description = "Should be excluded",
                 OwnerId = userId,
                 IsCompleted = true,
-                DueDate = FixedNowUtc.Date.AddDays(-2),
+                DueDate = DateOnly.FromDateTime(FixedNowUtc).AddDays(-2),
                 CreatedDateUtc = FixedNowUtc.AddDays(-1),
                 UpdatedDateUtc = FixedNowUtc.AddDays(-1)
             });
@@ -495,7 +596,7 @@ public sealed class TaskServiceTests
                 Description = "Task 1",
                 OwnerId = userId,
                 IsCompleted = false,
-                DueDate = FixedNowUtc.Date.AddDays(3),
+                DueDate = DateOnly.FromDateTime(FixedNowUtc).AddDays(3),
                 CreatedDateUtc = FixedNowUtc.AddDays(-2),
                 UpdatedDateUtc = FixedNowUtc.AddDays(-2)
             },
@@ -505,7 +606,7 @@ public sealed class TaskServiceTests
                 Description = "Task 2",
                 OwnerId = userId,
                 IsCompleted = false,
-                DueDate = FixedNowUtc.Date.AddDays(1),
+                DueDate = DateOnly.FromDateTime(FixedNowUtc).AddDays(1),
                 CreatedDateUtc = FixedNowUtc.AddDays(-1),
                 UpdatedDateUtc = FixedNowUtc.AddDays(-1)
             });

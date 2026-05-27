@@ -21,9 +21,9 @@ public sealed class CreateTaskRequestValidator : AbstractValidator<CreateTaskReq
             .Must(BeTodayOrFutureDate).WithMessage("Due date cannot be in the past.");
     }
 
-    private static bool BeValidDate(DateTime? dueDate) => !dueDate.HasValue || dueDate.Value.Year is > 1900 and < 9999;
+    private static bool BeValidDate(DateOnly? dueDate) => !dueDate.HasValue || dueDate.Value.Year is > 1900 and < 9999;
 
-    private bool BeTodayOrFutureDate(DateTime? dueDate) => !dueDate.HasValue || dueDate.Value.Date >= _dateTimeService.UtcNow.Date;
+    private bool BeTodayOrFutureDate(DateOnly? dueDate) => !dueDate.HasValue || dueDate.Value >= DateOnly.FromDateTime(_dateTimeService.UtcNow);
 }
 
 public sealed class UpdateTaskRequestValidator : AbstractValidator<UpdateTaskRequest>
@@ -38,5 +38,5 @@ public sealed class UpdateTaskRequestValidator : AbstractValidator<UpdateTaskReq
             .Must(BeValidDate).WithMessage("Due date is invalid.");
     }
 
-    private static bool BeValidDate(DateTime? dueDate) => !dueDate.HasValue || dueDate.Value.Year is > 1900 and < 9999;
+    private static bool BeValidDate(DateOnly? dueDate) => !dueDate.HasValue || dueDate.Value.Year is > 1900 and < 9999;
 }

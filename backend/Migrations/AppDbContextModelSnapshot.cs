@@ -65,7 +65,7 @@ namespace ToDoManagement.Api.Migrations
 						.IsRequired()
 						.HasColumnType("TEXT");
 
-					b.Property<DateTime?>("DueDate")
+					b.Property<DateOnly?>("DueDate")
 						.HasColumnType("TEXT");
 
 					b.Property<bool>("IsCompleted")
@@ -97,7 +97,7 @@ namespace ToDoManagement.Api.Migrations
 						.IsRequired()
 						.HasColumnType("TEXT");
 
-					b.Property<DateTime?>("DueDate")
+					b.Property<DateOnly?>("DueDate")
 						.HasColumnType("TEXT");
 
 					b.Property<bool>("IsCompleted")
@@ -146,6 +146,7 @@ namespace ToDoManagement.Api.Migrations
 
 					b.Property<string>("Username")
 						.IsRequired()
+						.UseCollation("NOCASE")
 						.HasColumnType("TEXT");
 
 					b.HasKey("Id");

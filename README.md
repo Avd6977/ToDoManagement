@@ -126,8 +126,16 @@ npm run seed:tasks -- --email qa.seed@example.com --password Strong1! --register
   - Fix: stop the running API process, then rerun build/test.
 - Frontend can not reach API:
   - Verify backend is running first with `dotnet run`.
-  - Verify frontend is running with `npm run dev`.
+  - Verify frontend is running with `npm start`.
   - Confirm browser is opened to the Vite URL shown in terminal.
+
+## Security Enhancements (Planned)
+
+- JWT signing key management:
+  - Current state: JWT settings are read from `backend/appsettings.json` for local/dev convenience.
+  - Required enhancement: move `Jwt:Key` to a secure secret store (for example Azure Key Vault) or environment-based secret configuration, and remove committed secrets from source control.
+  - Target scope: all non-local environments (QA, staging, production).
+  - Note: this change is intentionally deferred until Key Vault or equivalent secret-management settings are available.
 
 ## Features
 
@@ -243,21 +251,22 @@ dotnet ef migrations remove
 
 - `POST /api/auth/register`
   - Body: `{ "fullName": "string", "username": "email", "password": "string" }`
-  - Returns: `{ id, fullName, username, token, refreshToken }` (`username` contains the user's email)
+  - Returns: `{ id, fullName, username }` (`username` contains the user's email)
   - Also sets secure HttpOnly cookies for access and refresh tokens.
 - `POST /api/auth/login`
   - Body: `{ "username": "email", "password": "string" }`
-  - Returns: `{ id, fullName, username, token, refreshToken }` (`username` contains the user's email)
+  - Returns: `{ id, fullName, username }` (`username` contains the user's email)
   - Also sets secure HttpOnly cookies for access and refresh tokens.
 - `POST /api/auth/refresh`
   - Body: optional `{ "refreshToken": "string" }` (falls back to refresh-token cookie when omitted)
-  - Returns: `{ id, fullName, username, token, refreshToken }`
+  - Returns: `{ id, fullName, username }`
   - Behavior: revokes the previous refresh token and issues a new one.
   - Updates secure HttpOnly cookies with the newly issued token pair.
 - `POST /api/auth/revoke`
   - Body: optional `{ "refreshToken": "string" }` (falls back to refresh-token cookie when omitted)
   - Revokes the specified refresh token.
 - `POST /api/auth/logout`
+  - Requires authentication.
   - Revokes current refresh token when available.
   - Clears secure HttpOnly auth cookies.
 - `GET /api/auth/session`
@@ -304,6 +313,10 @@ All endpoints require authenticated session (Bearer token or cookie-authenticate
 
 ## Frontend Notes
 
+- API base URL configuration:
+  - Default: `http://localhost:5000/api`
+  - Override with environment variable `VITE_API_BASE_URL`.
+
 - Auth is route-based:
   - `/` login screen (default)
   - `/register` registration screen
@@ -337,6 +350,8 @@ All endpoints require authenticated session (Bearer token or cookie-authenticate
 
 ## Future Improvements
 
-- Add a production-ready Forgot Password flow backed by a production-grade email provider (for example SendGrid/SES) and proper secret management.
+- Add a production-ready Forgot Password flow backed by a production-grade email provider (for example SendGrid/SES)
+- Add roper secret management 
+  - Required enhancement: move `Jwt:Key` to a secure secret store (for example Azure Key Vault) or environment-based secret configuration, and remove committed secrets from source control.
 - Add rate limiting and abuse protections around auth endpoints.
 - Add role-based authorization and stricter revoke authorization semantics.

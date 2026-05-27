@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
-import { LoginForm } from './LoginForm';
+import { LoginForm } from 'src/components/LoginForm/LoginForm';
 
 describe('LoginForm', () => {
     it('disables submit until required fields are valid', async () => {

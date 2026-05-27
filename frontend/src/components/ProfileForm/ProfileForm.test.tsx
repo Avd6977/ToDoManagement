@@ -1,8 +1,8 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
-import type { User } from '../../types/User';
-import { ProfileForm } from './ProfileForm';
+import type { User } from 'src/types/User';
+import { ProfileForm } from 'src/components/ProfileForm/ProfileForm';
 
 describe('ProfileForm', () => {
     const user: User = {

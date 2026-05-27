@@ -56,7 +56,9 @@ public sealed class TaskService : ITaskService
             return ServiceResult<PagedResponse<TaskResponse>>.Failure(StatusCodes.Status400BadRequest, "Invalid page size. Allowed values are 25, 50, or 100.");
         }
 
-        var query = _dbContext.Tasks.Where(t => t.OwnerId == userId);
+        var query = _dbContext.Tasks
+            .AsNoTracking()
+            .Where(t => t.OwnerId == userId);
 
         if (normalizedStatus == TaskFilterStatus.Open)
         {
@@ -68,15 +70,14 @@ public sealed class TaskService : ITaskService
         }
         else if (normalizedStatus == TaskFilterStatus.Overdue)
         {
-            var today = _dateTimeService.UtcNow.Date;
-            query = query.Where(t => !t.IsCompleted && t.DueDate.HasValue && t.DueDate.Value.Date < today);
+            var today = DateOnly.FromDateTime(_dateTimeService.UtcNow);
+            query = query.Where(t => !t.IsCompleted && t.DueDate.HasValue && t.DueDate.Value < today);
         }
 
         var normalizedSearch = (search ?? string.Empty).Trim();
         if (!string.IsNullOrWhiteSpace(normalizedSearch))
         {
-            var loweredSearch = normalizedSearch.ToLowerInvariant();
-            query = query.Where(t => t.Description.ToLower().Contains(loweredSearch));
+            query = query.Where(t => EF.Functions.Like(EF.Functions.Collate(t.Description, "NOCASE"), $"%{normalizedSearch}%"));
         }
 
         var totalCount = await query.CountAsync(cancellationToken);
@@ -96,9 +97,9 @@ public sealed class TaskService : ITaskService
                     .ThenBy(t => t.DueDate)
                     .ThenByDescending(t => t.CreatedDateUtc),
             _ when normalizedSortDirection == TaskSortDirection.Desc
-                => query.OrderBy(t => t.CreatedDateUtc).ThenBy(t => t.Description),
+                => query.OrderByDescending(t => t.CreatedDateUtc).ThenBy(t => t.Description),
             _
-                => query.OrderByDescending(t => t.CreatedDateUtc).ThenBy(t => t.Description)
+                => query.OrderBy(t => t.CreatedDateUtc).ThenBy(t => t.Description)
         };
 
         var tasks = await sortedQuery
@@ -167,7 +168,7 @@ public sealed class TaskService : ITaskService
         var nowUtc = _dateTimeService.UtcNow;
         if (IsDueDateChanged(task.DueDate, request.DueDate)
             && request.DueDate.HasValue
-            && request.DueDate.Value.Date < nowUtc.Date)
+            && request.DueDate.Value < DateOnly.FromDateTime(nowUtc))
         {
             return ServiceResult<TaskResponse>.Failure(StatusCodes.Status400BadRequest, "Due date cannot be changed to a past date.");
         }
@@ -214,7 +215,7 @@ public sealed class TaskService : ITaskService
         UpdatedDateUtc = task.UpdatedDateUtc
     };
 
-    private static bool IsDueDateChanged(DateTime? existingDueDate, DateTime? requestedDueDate)
+    private static bool IsDueDateChanged(DateOnly? existingDueDate, DateOnly? requestedDueDate)
     {
         if (!existingDueDate.HasValue && !requestedDueDate.HasValue)
         {
@@ -226,7 +227,7 @@ public sealed class TaskService : ITaskService
             return true;
         }
 
-        return existingDueDate.Value.Date != requestedDueDate.Value.Date;
+        return existingDueDate.Value != requestedDueDate.Value;
     }
 
     private static TaskFilterStatus? ParseStatus(string? value)

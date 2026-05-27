@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import {
     toasterMessageService,
     type ToasterMessage
-} from '../../services/toasterMessageService';
+} from 'src/services/toasterMessageService';
 
 const TOAST_TIMEOUT_MS = 4000;
 

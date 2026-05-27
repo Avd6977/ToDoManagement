@@ -43,7 +43,7 @@ public sealed class TasksControllerDueDateUpdateTests
 
         var ownerId = Guid.NewGuid();
         var taskId = Guid.NewGuid();
-        var originalPastDueDate = FixedNowUtc.Date.AddDays(-2);
+        var originalPastDueDate = DateOnly.FromDateTime(FixedNowUtc).AddDays(-2);
 
         dbContext.Users.Add(new User
         {
@@ -128,7 +128,7 @@ public sealed class TasksControllerDueDateUpdateTests
         var request = new UpdateTaskRequest
         {
             Description = "Updated description",
-            DueDate = FixedNowUtc.Date.AddDays(-1),
+            DueDate = DateOnly.FromDateTime(FixedNowUtc).AddDays(-1),
             IsCompleted = false
         };
 
@@ -159,7 +159,7 @@ public sealed class TasksControllerDueDateUpdateTests
 
         var ownerId = Guid.NewGuid();
         var taskId = Guid.NewGuid();
-        var futureDueDate = FixedNowUtc.Date.AddDays(2);
+        var futureDueDate = DateOnly.FromDateTime(FixedNowUtc).AddDays(2);
 
         dbContext.Users.Add(new User
         {

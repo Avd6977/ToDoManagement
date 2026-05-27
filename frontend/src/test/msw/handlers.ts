@@ -1,15 +1,62 @@
 import { http, HttpResponse } from 'msw';
 
+let isAuthenticatedSessionActive = false;
+
+export const setMockAuthenticatedSession = (isAuthenticated: boolean): void => {
+    isAuthenticatedSessionActive = isAuthenticated;
+};
+
+const buildAuthResponse = (fullName = 'Alice Johnson') => ({
+    id: '11111111-1111-1111-1111-111111111111',
+    fullName,
+    username: 'alice@todo.local'
+});
+
+const getTodayDateOnly = (): string => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+};
+
 export const handlers = [
-    http.post('http://localhost:5000/api/auth/register', async () =>
-        HttpResponse.json({
+    http.post('http://localhost:5000/api/auth/register', async () => {
+        isAuthenticatedSessionActive = true;
+        return HttpResponse.json(buildAuthResponse('Alice Johnson'));
+    }),
+    http.post('http://localhost:5000/api/auth/login', async () => {
+        isAuthenticatedSessionActive = true;
+        return HttpResponse.json(buildAuthResponse('Alice Johnson'));
+    }),
+    http.get('http://localhost:5000/api/auth/session', async () => {
+        if (!isAuthenticatedSessionActive) {
+            return HttpResponse.json(
+                { message: 'Unauthorized' },
+                { status: 401 }
+            );
+        }
+
+        return HttpResponse.json({
             id: '11111111-1111-1111-1111-111111111111',
             fullName: 'Alice Johnson',
-            username: 'alice@todo.local',
-            token: 'test-jwt-token',
-            refreshToken: 'test-refresh-token'
-        })
-    ),
+            username: 'alice@todo.local'
+        });
+    }),
+    http.post('http://localhost:5000/api/auth/refresh', async () => {
+        if (!isAuthenticatedSessionActive) {
+            return HttpResponse.json(
+                { message: 'Refresh token is required.' },
+                { status: 401 }
+            );
+        }
+
+        return HttpResponse.json(buildAuthResponse('Alice Johnson'));
+    }),
+    http.post('http://localhost:5000/api/auth/logout', async () => {
+        isAuthenticatedSessionActive = false;
+        return HttpResponse.json({ message: 'Logged out successfully.' });
+    }),
     http.get('http://localhost:5000/api/tasks', async ({ request }) => {
         const url = new URL(request.url);
         const status = (url.searchParams.get('status') ?? 'all').toLowerCase();
@@ -28,13 +75,13 @@ export const handlers = [
             {
                 id: '22222222-2222-2222-2222-222222222222',
                 description: 'From MSW',
-                dueDate: '2026-05-20T00:00:00.000Z',
+                dueDate: '2026-05-20',
                 isCompleted: false
             },
             {
                 id: '33333333-3333-3333-3333-333333333333',
                 description: 'Already done',
-                dueDate: '2026-06-15T00:00:00.000Z',
+                dueDate: '2026-06-15',
                 isCompleted: true
             }
         ];
@@ -43,13 +90,13 @@ export const handlers = [
             ...Array.from({ length: 30 }, (_, index) => ({
                 id: `open-task-${index + 1}`,
                 description: `Open Task ${String(index + 1).padStart(2, '0')}`,
-                dueDate: index % 3 === 0 ? '2026-05-20T00:00:00.000Z' : null,
+                dueDate: index % 3 === 0 ? '2026-05-20' : null,
                 isCompleted: false
             })),
             ...Array.from({ length: 30 }, (_, index) => ({
                 id: `completed-task-${index + 1}`,
                 description: `Completed Task ${String(index + 1).padStart(2, '0')}`,
-                dueDate: '2026-06-15T00:00:00.000Z',
+                dueDate: '2026-06-15',
                 isCompleted: true
             }))
         ];
@@ -70,7 +117,7 @@ export const handlers = [
                               return false;
                           }
 
-                          return new Date(task.dueDate).getTime() < Date.now();
+                          return task.dueDate < getTodayDateOnly();
                       })
                     : allTasks;
 
@@ -90,15 +137,15 @@ export const handlers = [
                 : sort === 'duedate'
                   ? [...filtered].sort((left, right) => {
                         const leftDate = left.dueDate
-                            ? new Date(left.dueDate).getTime()
-                            : Number.MAX_SAFE_INTEGER;
+                            ? left.dueDate
+                            : '9999-12-31';
                         const rightDate = right.dueDate
-                            ? new Date(right.dueDate).getTime()
-                            : Number.MAX_SAFE_INTEGER;
+                            ? right.dueDate
+                            : '9999-12-31';
 
                         return sortDirection === 'desc'
-                            ? rightDate - leftDate
-                            : leftDate - rightDate;
+                            ? rightDate.localeCompare(leftDate)
+                            : leftDate.localeCompare(rightDate);
                     })
                   : sortDirection === 'desc'
                     ? [...filtered].reverse()

@@ -123,6 +123,43 @@ public sealed class TasksControllerTests
         badRequest.StatusCode.Should().Be(StatusCodes.Status400BadRequest);
     }
 
+    [Fact]
+    public async Task CreateTask_Should_ReturnCreatedStatusCode_WithCreatedTaskPayload()
+    {
+        // ARRANGE
+        var userId = Guid.NewGuid();
+        var response = new TaskResponse
+        {
+            Id = Guid.NewGuid(),
+            Description = "New task",
+            IsCompleted = false,
+            OwnerId = userId,
+            CreatedDateUtc = DateTime.UtcNow,
+            UpdatedDateUtc = DateTime.UtcNow
+        };
+
+        _taskServiceMock
+            .Setup(x => x.CreateTaskAsync(
+                userId,
+                It.IsAny<CreateTaskRequest>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(ServiceResult<TaskResponse>.Success(response, StatusCodes.Status201Created));
+
+        var controller = CreateController(userId);
+
+        // ACT
+        var result = await controller.CreateTask(new CreateTaskRequest
+        {
+            Description = "New task"
+        }, CancellationToken.None);
+
+        // ASSERT
+        using var scope = new AssertionScope();
+        var createdResult = result.Result.Should().BeOfType<ObjectResult>().Subject;
+        createdResult.StatusCode.Should().Be(StatusCodes.Status201Created);
+        createdResult.Value.Should().BeEquivalentTo(response);
+    }
+
     private TasksController CreateController(Guid? userId = null)
     {
         var controller = new TasksController(_taskServiceMock.Object)

@@ -1,5 +1,5 @@
 import { FormEvent, useState } from "react";
-import type { User } from "../../types/User";
+import type { User } from "src/types/User";
 
 const FULL_NAME_MAX_LENGTH = 100;
 const EMAIL_MAX_LENGTH = 254;

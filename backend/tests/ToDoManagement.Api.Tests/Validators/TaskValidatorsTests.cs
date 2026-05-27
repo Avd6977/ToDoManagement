@@ -33,7 +33,7 @@ public sealed class TaskValidatorsTests
         var request = new CreateTaskRequest
         {
             Description = "Task description",
-            DueDate = FixedNowUtc.Date.AddDays(dueDateOffsetDays)
+            DueDate = DateOnly.FromDateTime(FixedNowUtc).AddDays(dueDateOffsetDays)
         };
 
         // ACT
@@ -60,7 +60,7 @@ public sealed class TaskValidatorsTests
         var request = new UpdateTaskRequest
         {
             Description = "Task description",
-            DueDate = FixedNowUtc.Date.AddDays(dueDateOffsetDays),
+            DueDate = DateOnly.FromDateTime(FixedNowUtc).AddDays(dueDateOffsetDays),
             IsCompleted = false
         };
 
@@ -81,7 +81,7 @@ public sealed class TaskValidatorsTests
         var request = new CreateTaskRequest
         {
             Description = new string('a', descriptionLength),
-            DueDate = FixedNowUtc.Date
+            DueDate = DateOnly.FromDateTime(FixedNowUtc)
         };
 
         // ACT
@@ -106,7 +106,7 @@ public sealed class TaskValidatorsTests
         var request = new UpdateTaskRequest
         {
             Description = new string('a', descriptionLength),
-            DueDate = FixedNowUtc.Date,
+            DueDate = DateOnly.FromDateTime(FixedNowUtc),
             IsCompleted = false
         };
 
@@ -132,7 +132,7 @@ public sealed class TaskValidatorsTests
         var request = new CreateTaskRequest
         {
             Description = description,
-            DueDate = FixedNowUtc.Date
+            DueDate = DateOnly.FromDateTime(FixedNowUtc)
         };
 
         // ACT

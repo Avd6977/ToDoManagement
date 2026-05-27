@@ -11,5 +11,9 @@ public static class RegisterSettings
         builder.Services.Configure<JwtTokenDto>(
             builder.Configuration.GetSection("Jwt"),
             options => options.BindNonPublicProperties = true);
+
+        builder.Services.Configure<RefreshTokenCleanupOptions>(
+            builder.Configuration.GetSection("RefreshTokenCleanup"),
+            options => options.BindNonPublicProperties = true);
     }
 }

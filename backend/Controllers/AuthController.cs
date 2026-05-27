@@ -1,6 +1,8 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.Extensions.Options;
 using ToDoManagement.Api.Dtos;
 using ToDoManagement.Api.Services.Interfaces;
 
@@ -8,17 +10,19 @@ namespace ToDoManagement.Api.Controllers;
 
 [ApiController]
 [Route("api/auth")]
+[EnableRateLimiting("AuthEndpoints")]
 public sealed class AuthController : ControllerBase
 {
     private const string AccessTokenCookieName = "todo_access_token";
     private const string RefreshTokenCookieName = "todo_refresh_token";
-    private const int RefreshTokenCookieDays = 14;
 
     private readonly IAuthService _authService;
+    private readonly JwtTokenDto _jwtOptions;
 
-    public AuthController(IAuthService authService)
+    public AuthController(IAuthService authService, IOptions<JwtTokenDto> jwtOptions)
     {
         _authService = authService;
+        _jwtOptions = jwtOptions.Value;
     }
 
     [HttpPost("register")]
@@ -31,7 +35,7 @@ public sealed class AuthController : ControllerBase
         }
 
         SetAuthCookies(result.Value!);
-        return Ok(result.Value);
+        return Ok(MapAuthResponse(result.Value!));
     }
 
     [HttpPost("login")]
@@ -44,7 +48,7 @@ public sealed class AuthController : ControllerBase
         }
 
         SetAuthCookies(result.Value!);
-        return Ok(result.Value);
+        return Ok(MapAuthResponse(result.Value!));
     }
 
     [HttpPost("refresh")]
@@ -67,7 +71,7 @@ public sealed class AuthController : ControllerBase
         }
 
         SetAuthCookies(result.Value!);
-        return Ok(result.Value);
+        return Ok(MapAuthResponse(result.Value!));
     }
 
     [HttpPost("revoke")]
@@ -114,6 +118,7 @@ public sealed class AuthController : ControllerBase
         });
     }
 
+    [Authorize]
     [HttpPost("logout")]
     public async Task<IActionResult> Logout(CancellationToken cancellationToken)
     {
@@ -171,7 +176,17 @@ public sealed class AuthController : ControllerBase
             : null;
     }
 
-    private void SetAuthCookies(AuthResponse response)
+    private static AuthResponse MapAuthResponse(IssuedAuthResult response)
+    {
+        return new AuthResponse
+        {
+            Id = response.Id,
+            FullName = response.FullName,
+            Username = response.Username
+        };
+    }
+
+    private void SetAuthCookies(IssuedAuthResult response)
     {
         Response.Cookies.Append(
             AccessTokenCookieName,
@@ -181,7 +196,7 @@ public sealed class AuthController : ControllerBase
         Response.Cookies.Append(
             RefreshTokenCookieName,
             response.RefreshToken,
-            CreateCookieOptions(TimeSpan.FromDays(RefreshTokenCookieDays)));
+            CreateCookieOptions(TimeSpan.FromDays(_jwtOptions.RefreshTokenExpiresInDays)));
     }
 
     private void ClearAuthCookies()

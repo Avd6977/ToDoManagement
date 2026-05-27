@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
-import { AppHeader } from './AppHeader';
+import { AppHeader } from 'src/components/AppHeader/AppHeader';
 
 describe('AppHeader', () => {
     it('opens profile menu, navigates to profile, and closes on outside click', async () => {

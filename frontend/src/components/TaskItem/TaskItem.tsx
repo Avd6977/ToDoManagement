@@ -1,8 +1,8 @@
 import { useState } from "react";
-import type { Task } from "../../types/Task";
-import type { User } from "../../types/User";
-import { ConfirmationModal } from "../ConfirmationModal/ConfirmationModal";
-import { TaskForm } from "../TaskForm/TaskForm";
+import type { Task } from "src/types/Task";
+import type { User } from "src/types/User";
+import { ConfirmationModal } from "src/components/ConfirmationModal/ConfirmationModal";
+import { TaskForm } from "src/components/TaskForm/TaskForm";
 
 const toLocalDateInputValue = (date: Date): string => {
   const year = date.getFullYear();
@@ -10,6 +10,13 @@ const toLocalDateInputValue = (date: Date): string => {
   const day = String(date.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
 };
+
+const formatDateOnlyForDisplay = (dateOnly: string): string => {
+  const [year, month, day] = dateOnly.split("-").map(Number);
+  return new Date(year, month - 1, day).toLocaleDateString();
+};
+
+const getTodayDateOnly = (): string => toLocalDateInputValue(new Date());
 
 interface TaskItemProps {
   task: Task;
@@ -59,7 +66,7 @@ export const TaskItem = ({
   const isOverdue =
     !task.isCompleted
     && !!task.dueDate
-    && new Date(task.dueDate).getTime() < Date.now();
+    && task.dueDate < getTodayDateOnly();
 
   return (
     <li className={`task-item ${task.isCompleted ? "done" : ""} ${isOverdue ? "overdue" : ""}`}>
@@ -82,7 +89,7 @@ export const TaskItem = ({
                   <span className="overdue-icon" title="Overdue" aria-label="Overdue">⚠</span>
                 )}
               </p>
-              <p>Due: {task.dueDate ? new Date(task.dueDate).toLocaleDateString() : "None"}</p>
+              <p>Due: {task.dueDate ? formatDateOnlyForDisplay(task.dueDate) : "None"}</p>
             </div>
 
             <div className="task-item-actions" aria-label="Task actions">

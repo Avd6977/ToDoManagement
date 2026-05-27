@@ -1,5 +1,5 @@
 import { FormEvent, useState } from "react";
-import type { Task } from "../../types/Task";
+import type { Task } from "src/types/Task";
 
 const TASK_DESCRIPTION_MAX_LENGTH = 2000;
 
@@ -12,13 +12,7 @@ interface TaskFormProps {
   enforceNoPastDueDateChanges?: boolean;
 }
 
-const toDateInputValue = (isoDate: string | null | undefined): string => {
-  if (!isoDate) {
-    return "";
-  }
-
-  return new Date(isoDate).toISOString().slice(0, 10);
-};
+const toDateInputValue = (dateOnly: string | null | undefined): string => dateOnly ?? "";
 
 const toLocalDateInputValue = (date: Date): string => {
   const year = date.getFullYear();
@@ -55,7 +49,7 @@ export const TaskForm = ({
     : "";
 
   const dueDateError = touched.dueDate
-    ? dueDate && Number.isNaN(new Date(dueDate).getTime())
+    ? dueDate && !/^\d{4}-\d{2}-\d{2}$/.test(dueDate)
       ? "Due date is invalid."
       : minDueDate && dueDate && dueDate < minDueDate
         ? "Due date cannot be in the past."
@@ -68,7 +62,7 @@ export const TaskForm = ({
     : "";
 
   const hasInvalidDueDate = !!(
-    (dueDate && Number.isNaN(new Date(dueDate).getTime()))
+    (dueDate && !/^\d{4}-\d{2}-\d{2}$/.test(dueDate))
     || (minDueDate && dueDate && dueDate < minDueDate)
     || (
       enforceNoPastDueDateChanges
@@ -92,7 +86,7 @@ export const TaskForm = ({
       setLoading(true);
       await onSubmit({
         description: description.trim(),
-        dueDate: dueDate ? new Date(`${dueDate}T00:00:00`).toISOString() : null,
+        dueDate: dueDate || null,
       });
       setDescription("");
       setDueDate("");

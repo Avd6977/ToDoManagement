@@ -1,6 +1,6 @@
 import { FormEvent, useState } from "react";
-import type { User } from "../../types/User";
-import { login } from "../../services/api";
+import type { User } from "src/types/User";
+import { login } from "src/services/auth.service";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 

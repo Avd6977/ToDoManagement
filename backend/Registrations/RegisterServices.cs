@@ -1,6 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using System.Threading.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using ToDoManagement.Api.Data;
@@ -30,8 +31,10 @@ public static class RegisterServices
         builder.Services.AddScoped<IDateTimeService, DateTimeService>();
         builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
         builder.Services.AddScoped<IRefreshTokenService, RefreshTokenService>();
+        builder.Services.AddScoped<IRefreshTokenCleanupService, RefreshTokenCleanupService>();
         builder.Services.AddScoped<IAuthService, AuthService>();
         builder.Services.AddScoped<ITaskService, TaskService>();
+        builder.Services.AddHostedService<RefreshTokenCleanupHostedService>();
 
         var jwtSettings = builder.Configuration.GetSection("Jwt").Get<JwtTokenDto>()
             ?? throw new InvalidOperationException("Jwt configuration is missing.");
@@ -74,13 +77,34 @@ public static class RegisterServices
 
         builder.Services.AddAuthorization();
 
+        builder.Services.AddRateLimiter(options =>
+        {
+            options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+            options.AddPolicy("AuthEndpoints", context =>
+            {
+                var remoteIp = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+
+                return RateLimitPartition.GetFixedWindowLimiter(
+                    partitionKey: remoteIp,
+                    factory: _ => new FixedWindowRateLimiterOptions
+                    {
+                        PermitLimit = 20,
+                        Window = TimeSpan.FromMinutes(1),
+                        QueueLimit = 0
+                    });
+            });
+        });
+
         var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
             ?? ["http://localhost:5173"];
 
         builder.Services.AddCors(options =>
         {
             options.AddPolicy("Frontend", policy =>
-                policy.WithOrigins(allowedOrigins).AllowAnyHeader().AllowAnyMethod().AllowCredentials());
+                policy.WithOrigins(allowedOrigins)
+                    .WithMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
+                    .WithHeaders("Content-Type", "Authorization")
+                    .AllowCredentials());
         });
     }
 }

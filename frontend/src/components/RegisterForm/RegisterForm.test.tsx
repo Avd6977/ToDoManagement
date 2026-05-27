@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
-import { RegisterForm } from './RegisterForm';
+import { RegisterForm } from 'src/components/RegisterForm/RegisterForm';
 
 describe('RegisterForm', () => {
     it('shows password validation error only after password field is touched', async () => {
@@ -42,9 +42,7 @@ describe('RegisterForm', () => {
         expect(onAuthenticated).toHaveBeenCalledTimes(1);
         expect(onAuthenticated.mock.calls[0][0]).toMatchObject({
             fullName: 'Alice Johnson',
-            email: 'alice@todo.local',
-            token: 'test-jwt-token',
-            refreshToken: 'test-refresh-token'
+            email: 'alice@todo.local'
         });
     });
 

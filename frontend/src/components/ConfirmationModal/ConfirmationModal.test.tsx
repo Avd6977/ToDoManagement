@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
-import { ConfirmationModal } from './ConfirmationModal';
+import { ConfirmationModal } from 'src/components/ConfirmationModal/ConfirmationModal';
 
 describe('ConfirmationModal', () => {
     it('defaults the confirm button title to Confirm', async () => {

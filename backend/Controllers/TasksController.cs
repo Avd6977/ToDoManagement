@@ -58,7 +58,7 @@ public sealed class TasksController : ControllerBase
             return ToErrorResult(result.StatusCode, result.Message);
         }
 
-        return CreatedAtAction(nameof(GetTasks), new { id = result.Value!.Id }, result.Value);
+        return StatusCode(StatusCodes.Status201Created, result.Value);
     }
 
     [HttpPut("{id:guid}")]
