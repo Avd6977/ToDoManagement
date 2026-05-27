@@ -7,10 +7,34 @@ Full-stack task management application with:
 ## Required Versions
 
 - .NET SDK: **8.0** (or newer 8.0.x patch)
-- Node.js: **18+** (LTS recommended)
+  - Download: <https://dotnet.microsoft.com/download/dotnet/8.0>
+  - Verify:
+    ```bash
+    dotnet --version
+    ```
+
+- Node.js: **LTS**
+  - Install the current LTS release (includes npm): <https://nodejs.org/en/download>
+  - Verify:
+    ```bash
+    node --version
+    ```
+
 - npm: **9+**
-- EF Core packages: **8.0.20**
+  - npm is included with Node.js LTS.
+  - Update globally if needed:
+    ```bash
+    npm install -g npm@^9
+    npm --version
+    ```
+
 - EF CLI: **dotnet-ef 8.0.20**
+  - Install/update:
+    ```bash
+    dotnet tool install --global dotnet-ef --version 8.0.20
+    dotnet tool update --global dotnet-ef --version 8.0.20
+    dotnet ef --version
+    ```
 
 ## Quick Start (Run The Project)
 
