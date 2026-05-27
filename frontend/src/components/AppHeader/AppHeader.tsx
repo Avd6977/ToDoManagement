@@ -21,7 +21,7 @@ export const AppHeader = ({
   const profileMenuRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    const handleDocumentMouseDown = (event: MouseEvent) => {
+    const handleDocumentPointerDown = (event: PointerEvent) => {
       if (!isProfileMenuOpen) {
         return;
       }
@@ -36,10 +36,10 @@ export const AppHeader = ({
       }
     };
 
-    document.addEventListener("mousedown", handleDocumentMouseDown);
+    document.addEventListener("pointerdown", handleDocumentPointerDown);
 
     return () => {
-      document.removeEventListener("mousedown", handleDocumentMouseDown);
+      document.removeEventListener("pointerdown", handleDocumentPointerDown);
     };
   }, [isProfileMenuOpen]);
 

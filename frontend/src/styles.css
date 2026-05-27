@@ -66,6 +66,8 @@ main {
   gap: 0.6rem;
   align-items: flex-start;
   flex-wrap: wrap;
+  align-self: flex-end;
+  justify-content: flex-end;
 }
 
 .auth-grid {
@@ -181,8 +183,8 @@ button.link-button:hover {
 }
 
 .profile-button {
-  width: 2rem;
-  height: 2rem;
+  width: 2.75rem;
+  height: 2.75rem;
   border-radius: 999px;
   padding: 0;
   display: inline-flex;
@@ -192,8 +194,8 @@ button.link-button:hover {
 }
 
 .profile-avatar {
-  width: 2rem;
-  height: 2rem;
+  width: 2.25rem;
+  height: 2.25rem;
   border-radius: 999px;
   display: inline-flex;
   align-items: center;
@@ -203,13 +205,15 @@ button.link-button:hover {
 
 .profile-menu {
   position: absolute;
-  top: 2.2rem;
+  top: 2.95rem;
   right: 0;
+  left: auto;
   background: #fff;
   border: 1px solid #d9e2ec;
   border-radius: 8px;
   box-shadow: 0 6px 20px rgba(16, 42, 67, 0.15);
   min-width: 120px;
+  max-width: calc(100vw - 1.25rem);
   padding: 0.3rem;
   z-index: 2;
 }
@@ -254,16 +258,19 @@ button.link-button:hover {
   gap: 0.75rem;
 }
 
+.toolbar-secondary-controls {
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-start;
+  gap: 0.6rem;
+}
+
 .page-size-control {
-  min-width: 8rem;
+  min-width: 6.75rem;
 }
 
 .sort-menu-wrapper {
   position: relative;
-}
-
-.sort-menu-right {
-  margin-left: auto;
 }
 
 .sort-icon-button {
@@ -314,6 +321,49 @@ button.link-button:hover {
   display: grid;
   gap: 0.5rem;
   box-shadow: 0 10px 24px rgba(16, 42, 67, 0.16);
+}
+
+@media (max-width: 719px) {
+  .create-plus-button {
+    width: 100%;
+    min-height: 2.25rem;
+  }
+
+  .toolbar-secondary-controls {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .sort-menu {
+    left: 0;
+    right: auto;
+  }
+}
+
+@media (max-width: 480px) {
+  main {
+    padding: 0.75rem;
+  }
+
+  .header-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  .toolbar-secondary-controls {
+    width: auto;
+    justify-content: flex-start;
+    align-self: flex-start;
+    gap: 0.75rem;
+  }
+
+  .page-size-control {
+    min-width: 0;
+  }
+
+  .page-size-control select {
+    min-width: 5.25rem;
+  }
 }
 
 .sort-menu svg {
@@ -556,7 +606,14 @@ button.link-button:hover {
   }
 
   .task-search {
+    flex: 1;
+    min-width: 260px;
     max-width: 420px;
+  }
+
+  .toolbar-secondary-controls {
+    margin-left: auto;
+    justify-content: flex-end;
   }
 
   .pagination-bar {
