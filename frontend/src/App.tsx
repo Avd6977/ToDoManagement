@@ -329,17 +329,6 @@ const App = (): JSX.Element => {
               fullName={user.fullName}
               onLogout={handleLogout}
               onProfileClick={() => navigate("/profile")}
-              rightActions={(
-                <button
-                  type="button"
-                  className="create-plus-button"
-                  title="Create Task"
-                  aria-label="Create Task"
-                  onClick={() => navigate("/create-task")}
-                >
-                  Create Task +
-                </button>
-              )}
             />
 
             <div className="task-toolbar">
@@ -357,6 +346,16 @@ const App = (): JSX.Element => {
                   placeholder="Search description"
                 />
               </label>
+
+              <button
+                type="button"
+                className="create-plus-button"
+                title="Create Task"
+                aria-label="Create Task"
+                onClick={() => navigate("/create-task")}
+              >
+                Create Task +
+              </button>
 
               <div className="sort-menu-wrapper sort-menu-right" ref={sortMenuRef}>
                 <button

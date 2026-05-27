@@ -31,7 +31,13 @@ dotnet build
 dotnet run
 ```
 
-3. Start the frontend in terminal #2:
+3. Open a second terminal at the repo root:
+
+```bash
+cd ToDoManagement
+```
+
+4. Start the frontend in terminal #2:
 
 ```bash
 cd frontend
@@ -39,7 +45,7 @@ npm install
 npm start
 ```
 
-4. Open the app in your browser:
+5. Open the app in your browser:
 - Frontend: `http://localhost:5173`
 - Backend API (if needed directly): `http://localhost:5000`
 - Swagger (Development only): `http://localhost:5000/swagger`
