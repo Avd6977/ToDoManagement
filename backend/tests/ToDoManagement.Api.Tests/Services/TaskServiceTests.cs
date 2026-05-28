@@ -204,6 +204,164 @@ public sealed class TaskServiceTests
     }
 
     [Fact]
+    public async Task UpdateTaskAsync_Should_RejectDescriptionChange_WhenTaskIsCompleted()
+    {
+        // ARRANGE
+        await using var dbContext = await CreateDbContextAsync();
+        var userId = Guid.NewGuid();
+        var taskId = Guid.NewGuid();
+        var dueDate = DateOnly.FromDateTime(FixedNowUtc).AddDays(3);
+
+        dbContext.Users.Add(new User
+        {
+            Id = userId,
+            FullName = "Completed User",
+            Username = "completed-user-description",
+            PasswordHash = "hash"
+        });
+
+        dbContext.Tasks.Add(new TaskItem
+        {
+            Id = taskId,
+            Description = "Completed task",
+            DueDate = dueDate,
+            OwnerId = userId,
+            IsCompleted = true,
+            CreatedDateUtc = FixedNowUtc.AddDays(-2),
+            UpdatedDateUtc = FixedNowUtc.AddDays(-1)
+        });
+
+        await dbContext.SaveChangesAsync();
+        var service = new TaskService(dbContext, _dateTimeServiceMock.Object);
+
+        var request = new ToDoManagement.Api.Dtos.UpdateTaskRequest
+        {
+            Description = "Changed description",
+            DueDate = dueDate,
+            IsCompleted = true
+        };
+
+        // ACT
+        var result = await service.UpdateTaskAsync(userId, taskId, request, CancellationToken.None);
+
+        // ASSERT
+        using var scope = new AssertionScope();
+        result.IsSuccess.Should().BeFalse();
+        result.StatusCode.Should().Be(400);
+        result.Message.Should().Be("Completed tasks can only update IsCompleted.");
+
+        var unchangedTask = await dbContext.Tasks.SingleAsync(t => t.Id == taskId);
+        unchangedTask.Description.Should().Be("Completed task");
+        unchangedTask.DueDate.Should().Be(dueDate);
+        unchangedTask.IsCompleted.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task UpdateTaskAsync_Should_RejectDueDateChange_WhenTaskIsCompleted()
+    {
+        // ARRANGE
+        await using var dbContext = await CreateDbContextAsync();
+        var userId = Guid.NewGuid();
+        var taskId = Guid.NewGuid();
+        var dueDate = DateOnly.FromDateTime(FixedNowUtc).AddDays(3);
+        var updatedDueDate = DateOnly.FromDateTime(FixedNowUtc).AddDays(5);
+
+        dbContext.Users.Add(new User
+        {
+            Id = userId,
+            FullName = "Completed User",
+            Username = "completed-user-due-date",
+            PasswordHash = "hash"
+        });
+
+        dbContext.Tasks.Add(new TaskItem
+        {
+            Id = taskId,
+            Description = "Completed task",
+            DueDate = dueDate,
+            OwnerId = userId,
+            IsCompleted = true,
+            CreatedDateUtc = FixedNowUtc.AddDays(-2),
+            UpdatedDateUtc = FixedNowUtc.AddDays(-1)
+        });
+
+        await dbContext.SaveChangesAsync();
+        var service = new TaskService(dbContext, _dateTimeServiceMock.Object);
+
+        var request = new ToDoManagement.Api.Dtos.UpdateTaskRequest
+        {
+            Description = "Completed task",
+            DueDate = updatedDueDate,
+            IsCompleted = true
+        };
+
+        // ACT
+        var result = await service.UpdateTaskAsync(userId, taskId, request, CancellationToken.None);
+
+        // ASSERT
+        using var scope = new AssertionScope();
+        result.IsSuccess.Should().BeFalse();
+        result.StatusCode.Should().Be(400);
+        result.Message.Should().Be("Completed tasks can only update IsCompleted.");
+
+        var unchangedTask = await dbContext.Tasks.SingleAsync(t => t.Id == taskId);
+        unchangedTask.Description.Should().Be("Completed task");
+        unchangedTask.DueDate.Should().Be(dueDate);
+        unchangedTask.IsCompleted.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task UpdateTaskAsync_Should_AllowIsCompletedToggle_WhenTaskIsCompleted_AndContentUnchanged()
+    {
+        // ARRANGE
+        await using var dbContext = await CreateDbContextAsync();
+        var userId = Guid.NewGuid();
+        var taskId = Guid.NewGuid();
+        var dueDate = DateOnly.FromDateTime(FixedNowUtc).AddDays(3);
+
+        dbContext.Users.Add(new User
+        {
+            Id = userId,
+            FullName = "Completed User",
+            Username = "completed-user-toggle",
+            PasswordHash = "hash"
+        });
+
+        dbContext.Tasks.Add(new TaskItem
+        {
+            Id = taskId,
+            Description = "Completed task",
+            DueDate = dueDate,
+            OwnerId = userId,
+            IsCompleted = true,
+            CreatedDateUtc = FixedNowUtc.AddDays(-2),
+            UpdatedDateUtc = FixedNowUtc.AddDays(-1)
+        });
+
+        await dbContext.SaveChangesAsync();
+        var service = new TaskService(dbContext, _dateTimeServiceMock.Object);
+
+        var request = new ToDoManagement.Api.Dtos.UpdateTaskRequest
+        {
+            Description = "Completed task",
+            DueDate = dueDate,
+            IsCompleted = false
+        };
+
+        // ACT
+        var result = await service.UpdateTaskAsync(userId, taskId, request, CancellationToken.None);
+
+        // ASSERT
+        using var scope = new AssertionScope();
+        result.IsSuccess.Should().BeTrue();
+        result.StatusCode.Should().Be(200);
+        result.Value.Should().NotBeNull();
+        result.Value!.IsCompleted.Should().BeFalse();
+        result.Value.Description.Should().Be("Completed task");
+        result.Value.DueDate.Should().Be(dueDate);
+    }
+
+    [Fact]
     public async Task DeleteTaskAsync_Should_ReturnForbidden_WhenUserDoesNotOwnTask()
     {
         // ARRANGE

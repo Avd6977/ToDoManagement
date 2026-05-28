@@ -6,6 +6,60 @@ import type { Task } from "src/types/Task";
 import type { User } from "src/types/User";
 
 describe("TaskItem", () => {
+  it("shows edit button for incomplete tasks", () => {
+    const task: Task = {
+      id: "task-edit-open",
+      description: "Open task",
+      dueDate: null,
+      isCompleted: false,
+    };
+
+    const currentUser: User = {
+      id: "user-1",
+      fullName: "Alice User",
+      email: "alice@todo.local",
+    };
+
+    render(
+      <TaskItem
+        task={task}
+        currentUser={currentUser}
+        onToggleComplete={vi.fn().mockResolvedValue(undefined)}
+        onDelete={vi.fn().mockResolvedValue(undefined)}
+        onUpdate={vi.fn().mockResolvedValue(undefined)}
+      />
+    );
+
+    expect(screen.getByRole("button", { name: "Edit" })).toBeInTheDocument();
+  });
+
+  it("hides edit button for completed tasks", () => {
+    const task: Task = {
+      id: "task-edit-completed",
+      description: "Completed task",
+      dueDate: null,
+      isCompleted: true,
+    };
+
+    const currentUser: User = {
+      id: "user-1",
+      fullName: "Alice User",
+      email: "alice@todo.local",
+    };
+
+    render(
+      <TaskItem
+        task={task}
+        currentUser={currentUser}
+        onToggleComplete={vi.fn().mockResolvedValue(undefined)}
+        onDelete={vi.fn().mockResolvedValue(undefined)}
+        onUpdate={vi.fn().mockResolvedValue(undefined)}
+      />
+    );
+
+    expect(screen.queryByRole("button", { name: "Edit" })).not.toBeInTheDocument();
+  });
+
   it("requires confirmation before deleting", async () => {
     const user = userEvent.setup();
     const onDelete = vi.fn().mockResolvedValue(undefined);
@@ -121,6 +175,7 @@ describe("TaskItem", () => {
 
     expect(statusButton).toHaveClass("task-status-toggle");
     expect(statusButton.className.includes("completed")).toBe(false);
+    expect(container.querySelector(".task-status-check")).toBeNull();
     expect(titleText.compareDocumentPosition(statusButton) & Node.DOCUMENT_POSITION_PRECEDING).toBeTruthy();
 
     await user.click(statusButton);

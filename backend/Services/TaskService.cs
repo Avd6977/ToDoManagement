@@ -165,6 +165,12 @@ public sealed class TaskService : ITaskService
             return ServiceResult<TaskResponse>.Failure(StatusCodes.Status403Forbidden, "Only the owner can update this task.");
         }
 
+        if (task.IsCompleted
+            && (task.Description != request.Description.Trim() || IsDueDateChanged(task.DueDate, request.DueDate)))
+        {
+            return ServiceResult<TaskResponse>.Failure(StatusCodes.Status400BadRequest, "Completed tasks can only update IsCompleted.");
+        }
+
         var nowUtc = _dateTimeService.UtcNow;
         if (IsDueDateChanged(task.DueDate, request.DueDate)
             && request.DueDate.HasValue

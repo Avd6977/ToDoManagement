@@ -100,7 +100,7 @@ To quickly create large task sets for pagination/filter/sort testing, run the fr
 From `frontend/`:
 
 ```bash
-npm run seed:tasks -- --email tester@example.com --password Strong1! --count 100 --startAt 1 --prefix "Task"
+node ./scripts/seed-tasks.mjs --email tester@example.com --password Strong1! --register true --count 100 --startAt 1 --taskPrefix "Task"
 ```
 
 Options:
@@ -108,7 +108,8 @@ Options:
 - `--password` (required): password for that user.
 - `--count` (optional): number of tasks to create (default: `100`).
 - `--startAt` (optional): first task number (default: `1`).
-- `--prefix` (optional): description prefix (default: `Task`).
+- `--taskPrefix` (optional): description prefix (default: `Task`).
+- `--prefix` (optional, legacy): alias for `--taskPrefix`.
 - `--apiBaseUrl` (optional): API base URL (default: `http://localhost:5000/api`).
 - `--register true` (optional): register the user first if login fails.
 - `--fullName` (optional): full name used when `--register true` is specified (default: `Task Seeder`).
@@ -116,26 +117,8 @@ Options:
 Example with auto-register:
 
 ```bash
-npm run seed:tasks -- --email qa.seed@example.com --password Strong1! --register true --fullName "QA Seeder" --count 50
+node ./scripts/seed-tasks.mjs --email qa.seed@example.com --password Strong1! --register true --fullName "QA Seeder" --count 50 --taskPrefix "Task"
 ```
-
-## Troubleshooting
-
-- Error copying `ToDoManagement.Api.exe` during build/test (`MSB3021` / `MSB3027`):
-  - Cause: an existing running API process is locking the binary.
-  - Fix: stop the running API process, then rerun build/test.
-- Frontend can not reach API:
-  - Verify backend is running first with `dotnet run`.
-  - Verify frontend is running with `npm start`.
-  - Confirm browser is opened to the Vite URL shown in terminal.
-
-## Security Enhancements (Planned)
-
-- JWT signing key management:
-  - Current state: JWT settings are read from `backend/appsettings.json` for local/dev convenience.
-  - Required enhancement: move `Jwt:Key` to a secure secret store (for example Azure Key Vault) or environment-based secret configuration, and remove committed secrets from source control.
-  - Target scope: all non-local environments (QA, staging, production).
-  - Note: this change is intentionally deferred until Key Vault or equivalent secret-management settings are available.
 
 ## Features
 
@@ -247,70 +230,6 @@ dotnet ef migrations remove
 - Initialization strategy: EF Core migrations (`Migrate()` at startup)
 - Result: pending migrations are applied automatically when the API starts
 
-## Authentication Endpoints
-
-- `POST /api/auth/register`
-  - Body: `{ "fullName": "string", "username": "email", "password": "string" }`
-  - Returns: `{ id, fullName, username }` (`username` contains the user's email)
-  - Also sets secure HttpOnly cookies for access and refresh tokens.
-- `POST /api/auth/login`
-  - Body: `{ "username": "email", "password": "string" }`
-  - Returns: `{ id, fullName, username }` (`username` contains the user's email)
-  - Also sets secure HttpOnly cookies for access and refresh tokens.
-- `POST /api/auth/refresh`
-  - Body: optional `{ "refreshToken": "string" }` (falls back to refresh-token cookie when omitted)
-  - Returns: `{ id, fullName, username }`
-  - Behavior: revokes the previous refresh token and issues a new one.
-  - Updates secure HttpOnly cookies with the newly issued token pair.
-- `POST /api/auth/revoke`
-  - Body: optional `{ "refreshToken": "string" }` (falls back to refresh-token cookie when omitted)
-  - Revokes the specified refresh token.
-- `POST /api/auth/logout`
-  - Requires authentication.
-  - Revokes current refresh token when available.
-  - Clears secure HttpOnly auth cookies.
-- `GET /api/auth/session`
-  - Requires authentication.
-  - Returns current session profile from token claims: `{ id, fullName, username }`.
-
-## Task Endpoints
-
-All endpoints require authenticated session (Bearer token or cookie-authenticated JWT).
-
-- `GET /api/tasks`
-  - Returns tasks for the current authenticated user only.
-  - Optional query params:
-    - `search`: filters by title/description
-    - `status`: `open`, `completed`, `overdue`, or `all`
-    - `sort`: `alphabetical`, `dueDate`, or `recentlyAdded` (default `recentlyAdded`)
-    - `sortDirection`: `asc` or `desc` (default `asc`)
-    - `page`: 1-based page number (default `1`)
-    - `pageSize`: `25`, `50`, or `100` (default `25`)
-  - Response shape:
-    - `PagedResponse<TaskResponse>`: `{ items, page, pageSize, totalCount, totalPages }`
-- `POST /api/tasks`
-  - Body: `{ description, dueDate? }`
-  - The task is always tied to the current authenticated user.
-- `PUT /api/tasks/{id}`
-  - Current authenticated user only.
-  - Body: `{ description, dueDate?, isCompleted }`
-- `DELETE /api/tasks/{id}`
-  - Current authenticated user only.
-
-Task item payloads include: `{ id, description, dueDate, isCompleted, createdDateUtc, updatedDateUtc }`.
-
-## Profile Endpoint
-
-All endpoints require authenticated session (Bearer token or cookie-authenticated JWT).
-
-- `PUT /api/auth/profile`
-  - Body: `{ "fullName": "string", "currentPassword"?: "string", "newPassword"?: "string" }`
-  - Behavior:
-    - Full name is updated when valid.
-    - Password changes are optional.
-    - If `newPassword` is provided, `currentPassword` is required and must match.
-    - Email is not editable.
-
 ## Frontend Notes
 
 - API base URL configuration:
@@ -355,3 +274,6 @@ All endpoints require authenticated session (Bearer token or cookie-authenticate
   - Required enhancement: move `Jwt:Key` to a secure secret store (for example Azure Key Vault) or environment-based secret configuration, and remove committed secrets from source control.
 - Add rate limiting and abuse protections around auth endpoints.
 - Add role-based authorization and stricter revoke authorization semantics.
+- Add the ability to create different lists and manage those lists
+- Add the ability to invite others to join your list in different capacities i.e. Reader, Editor, Creator
+- Add the ability to assign others in your list to tasks

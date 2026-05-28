@@ -82,7 +82,9 @@ export const TaskItem = ({
                   aria-label={task.isCompleted ? "Mark Incomplete" : "Mark Complete"}
                   title={task.isCompleted ? "Mark Incomplete" : "Mark Complete"}
                 >
-                  <span className="task-status-check" aria-hidden="true">✓</span>
+                  {task.isCompleted && (
+                    <span className="task-status-check" aria-hidden="true">✓</span>
+                  )}
                 </button>
                 <strong>{task.description}</strong>
                 {isOverdue && (
@@ -93,15 +95,17 @@ export const TaskItem = ({
             </div>
 
             <div className="task-item-actions" aria-label="Task actions">
-              <button
-                type="button"
-                className="task-action-button secondary"
-                onClick={() => setIsEditing(true)}
-                aria-label="Edit"
-                title="Edit"
-              >
-                <span aria-hidden="true">✎</span>
-              </button>
+              {!task.isCompleted && (
+                <button
+                  type="button"
+                  className="task-action-button secondary"
+                  onClick={() => setIsEditing(true)}
+                  aria-label="Edit"
+                  title="Edit"
+                >
+                  <span aria-hidden="true">✎</span>
+                </button>
+              )}
               <button
                 type="button"
                 className="task-action-button danger"

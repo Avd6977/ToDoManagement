@@ -1,6 +1,8 @@
 import axios from "axios";
 
 const args = process.argv.slice(2);
+const positionalArgs = args.filter((value) => !value.startsWith("--"));
+const hasNamedArgs = args.some((value) => value.startsWith("--"));
 
 const parseArgs = (argv) => {
   const parsed = {};
@@ -25,18 +27,19 @@ const parseArgs = (argv) => {
 };
 
 const options = parseArgs(args);
+const positional = hasNamedArgs ? [] : positionalArgs;
 
-const email = options.email;
-const password = options.password;
-const fullName = options.fullName ?? "Task Seeder";
-const apiBaseUrl = options.apiBaseUrl ?? "http://localhost:5000/api";
-const count = Number(options.count ?? "100");
-const startAt = Number(options.startAt ?? "1");
-const prefix = options.prefix ?? "Task";
-const shouldRegister = options.register === "true";
+const email = options.email ?? positional[0];
+const password = options.password ?? positional[1];
+const fullName = options.fullName ?? options.full_name ?? "Task Seeder";
+const apiBaseUrl = options.apiBaseUrl ?? options.api_base_url ?? positional[5] ?? "http://localhost:5000/api";
+const count = Number(options.count ?? positional[2] ?? "100");
+const startAt = Number(options.startAt ?? options.start_at ?? positional[3] ?? "1");
+const taskPrefix = options.taskPrefix ?? options.task_prefix ?? options.prefix ?? positional[4] ?? "Task";
+const shouldRegister = (options.register ?? positional[6] ?? "true") === "true";
 
 const printUsageAndExit = () => {
-  console.error("Usage: npm run seed:tasks -- --email <email> --password <password> [--count 100] [--startAt 1] [--prefix Task] [--apiBaseUrl http://localhost:5000/api] [--register true] [--fullName \"Task Seeder\"]");
+  console.error("Usage: npm run seed:tasks -- --email <email> --password <password> [--count 100] [--startAt 1] [--taskPrefix Task] [--apiBaseUrl http://localhost:5000/api] [--register true] [--fullName \"Task Seeder\"]");
   process.exit(1);
 };
 
@@ -114,7 +117,7 @@ const seedTasks = async () => {
 
   for (let index = 0; index < count; index += 1) {
     const taskNumber = startAt + index;
-    const description = createTaskDescription(prefix, taskNumber);
+    const description = createTaskDescription(taskPrefix, taskNumber);
 
     await apiClient.post(
       "/tasks",
